@@ -1,0 +1,91 @@
+# 本地开发中间件 + 一键整体验证环境
+# 仅启动基础设施： docker compose up -d postgres redis rabbitmq minio
+# 完整启动（含后端与后台）： docker compose up -d --build
+name: repairhub
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: repairhub-postgres
+    environment:
+      POSTGRES_DB: repairhub
+      POSTGRES_USER: repairhub
+      POSTGRES_PASSWORD: repairhub123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U repairhub"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: repairhub-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: repairhub-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # 管理控制台
+    volumes:
+      - rabbit_data:/var/lib/rabbitmq
+
+  minio:
+    image: minio/minio:latest
+    container_name: repairhub-minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"     # S3 API
+      - "9001:9001"     # 控制台
+    command: ["server", "/data", "--console-address", ":9001"]
+    volumes:
+      - minio_data:/data
+
+  backend:
+    profiles: ["full"]
+    build: ./backend
+    container_name: repairhub-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/repairhub
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_RABBITMQ_HOST: rabbitmq
+      APP_OSS_MINIO_ENDPOINT: http://minio:9000
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+
+  admin-web:
+    profiles: ["full"]
+    build: ./admin-web
+    container_name: repairhub-admin-web
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+
+volumes:
+  pg_data:
+  redis_data:
+  rabbit_data:
+  minio_data:
