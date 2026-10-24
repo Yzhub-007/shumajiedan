@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: repairhub-backend
+  profiles:
+    active: dev
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+app:
+  jwt:
+    # 生产环境务必通过环境变量覆盖，且不少于 256bit
+    secret: repairhub-dev-jwt-secret-please-change-me-32bytes-minimum!!
+    access-token-ttl-hours: 2
+    refresh-token-ttl-days: 30
+  sms:
+    # true：不发真实短信，验证码打印到日志并在发码响应中返回（仅限开发）
+    mock: true
+  oss:
+    # mock：返回占位 URL；minio：生成 MinIO 预签名直传地址
+    provider: mock
+    minio:
+      endpoint: http://localhost:9000
+      access-key: minioadmin
+      secret-key: minioadmin
+      bucket: repairhub
+  order:
+    # MVP 不接支付：验收通过直接完成；V1.1 置为 true 后走 PENDING_PAYMENT
+    payment-enabled: false
+    # 到达签到 GPS 校验半径（计划书 3.1.5）
+    arrive-check-radius-m: 500
+    # 派单半径（计划书 5.1.1）
+    dispatch-radius-km: 5
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
