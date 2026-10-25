@@ -55,6 +55,30 @@ export const reassignOrder = (id: number, engineerId: number) =>
 export const closeOrder = (id: number, reason: string) =>
   http.post(`/admin/orders/${id}/close`, { reason })
 
+// 工单详情复用客户端详情接口（ADMIN 角色可读任意工单）
+export interface OrderDetail {
+  order: OrderRow & { faultDesc: string; mediaUrls?: string[]; estimate?: number }
+  statusLogs: { fromStatusLabel: string | null; toStatusLabel: string; remark: string | null; createdAt: string }[]
+  quotes: { id: number; laborFee: number; partsFee: number; total: number; status: string; createdAt: string }[]
+  report: { diagnosis: string; solution: string; beforePhotos: string[]; afterPhotos: string[] } | null
+  engineer: { userId: number; realName: string; phone: string; ratingAvg: number; orderCount: number } | null
+}
+
+export const getOrderDetail = (id: number) => http.get<never, OrderDetail>(`/api/orders/${id}`)
+
+// 附近在线工程师候选人（指派/改派选人）
+export interface NearbyEngineer {
+  userId: number
+  realName: string
+  distanceM: number
+  ratingAvg: number
+  orderCount: number
+  onlineStatus: boolean
+}
+
+export const listNearbyEngineers = (id: number) =>
+  http.get<never, NearbyEngineer[]>(`/admin/orders/${id}/nearby-engineers`)
+
 // ---------- 设备类型与价格 ----------
 export interface CategoryRow {
   id: number
