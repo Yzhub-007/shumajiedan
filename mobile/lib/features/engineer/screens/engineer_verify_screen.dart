@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../shared/widgets/common_widgets.dart';
@@ -19,6 +20,8 @@ class _EngineerVerifyScreenState extends ConsumerState<EngineerVerifyScreen> {
   double _radiusKm = 10;
   bool _submitting = false;
   String? _currentStatus;
+  String? _frontUrl;
+  String? _backUrl;
 
   @override
   void initState() {
@@ -46,6 +49,29 @@ class _EngineerVerifyScreenState extends ConsumerState<EngineerVerifyScreen> {
     } catch (_) {}
   }
 
+  /// 拍身份证照并上传（TODO(2.2.6) 证书列表多图上传）
+  Future<void> _pickIdPhoto({required bool front}) async {
+    final picker = ImagePicker();
+    final XFile? photo = await picker.pickImage(
+      source: ImageSource.camera, maxWidth: 1600, imageQuality: 85);
+    if (photo == null) return;
+    try {
+      final url = await ref.read(apiClientProvider).upload(photo.path);
+      setState(() {
+        if (front) {
+          _frontUrl = url;
+        } else {
+          _backUrl = url;
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('上传失败：$e')));
+      }
+    }
+  }
+
   Future<void> _submit() async {
     if (_nameController.text.trim().isEmpty ||
         _idCardController.text.trim().isEmpty) {
@@ -53,14 +79,18 @@ class _EngineerVerifyScreenState extends ConsumerState<EngineerVerifyScreen> {
           .showSnackBar(const SnackBar(content: Text('请填写姓名与身份证号')));
       return;
     }
+    if (_frontUrl == null || _backUrl == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('请拍摄身份证正反面')));
+      return;
+    }
     setState(() => _submitting = true);
     try {
-      // TODO(2.2.6) 身份证/证书拍照上传：image_picker + /api/upload/presign 直传，回填 URL
       await ref.read(apiClientProvider).post('/api/engineer/verify', data: {
         'realName': _nameController.text.trim(),
         'idCardNo': _idCardController.text.trim(),
-        'idCardFrontUrl': 'https://placeholder/front.jpg',
-        'idCardBackUrl': 'https://placeholder/back.jpg',
+        'idCardFrontUrl': _frontUrl,
+        'idCardBackUrl': _backUrl,
         'certUrls': <String>[],
         'skillTags': _skillsController.text
             .split(',')
@@ -104,15 +134,57 @@ class _EngineerVerifyScreenState extends ConsumerState<EngineerVerifyScreen> {
               decoration: const InputDecoration(labelText: '身份证号', counterText: '')),
           const SizedBox(height: 8),
           Row(children: [
-            Expanded(child: OutlinedButton.icon(
-                onPressed: () {/* TODO(2.2.6) 拍身份证正面 */},
-                icon: const Icon(Icons.badge_outlined),
-                label: const Text('身份证正面'))),
+            Expanded(
+              child: InkWell(
+                onTap: () => _pickIdPhoto(front: true),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  height: 90,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Theme.of(context).colorScheme.outline),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: _frontUrl == null
+                      ? const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.badge_outlined),
+                            SizedBox(height: 4),
+                            Text('身份证正面', style: TextStyle(fontSize: 12)),
+                          ],
+                        )
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(_frontUrl!, fit: BoxFit.cover, width: double.infinity)),
+                ),
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: OutlinedButton.icon(
-                onPressed: () {/* TODO(2.2.6) 拍身份证反面 */},
-                icon: const Icon(Icons.badge),
-                label: const Text('身份证反面'))),
+            Expanded(
+              child: InkWell(
+                onTap: () => _pickIdPhoto(front: false),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  height: 90,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Theme.of(context).colorScheme.outline),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: _backUrl == null
+                      ? const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.badge),
+                            SizedBox(height: 4),
+                            Text('身份证反面', style: TextStyle(fontSize: 12)),
+                          ],
+                        )
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(_backUrl!, fit: BoxFit.cover, width: double.infinity)),
+                ),
+              ),
+            ),
           ]),
           const SizedBox(height: 12),
           TextField(

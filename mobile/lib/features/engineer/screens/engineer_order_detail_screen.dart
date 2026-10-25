@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../shared/widgets/common_widgets.dart';
@@ -98,37 +99,90 @@ class _EngineerOrderDetailScreenState extends ConsumerState<EngineerOrderDetailS
   Future<void> _showFinishDialog() async {
     final diagnosisController = TextEditingController();
     final solutionController = TextEditingController();
+    final beforeUrls = <String>[];
+    final afterUrls = <String>[];
+
+    Future<void> pickPhotos(List<String> target) async {
+      final files = await ImagePicker()
+          .pickMultiImage(imageQuality: 80, maxWidth: 1920);
+      for (final f in files) {
+        try {
+          final url = await ref.read(apiClientProvider).upload(f.path);
+          target.add(url);
+        } catch (_) {}
+      }
+    }
+
+    Widget photoStrip(List<String> urls) => SizedBox(
+          height: urls.isEmpty ? 0 : 72,
+          child: urls.isEmpty
+              ? null
+              : ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: urls.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (context, index) => ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child:
+                        Image.network(urls[index], width: 72, height: 72, fit: BoxFit.cover),
+                  ),
+                ),
+        );
+
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('完工提交'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: diagnosisController, maxLines: 2,
-              decoration: const InputDecoration(labelText: '故障诊断')),
-          const SizedBox(height: 12),
-          TextField(controller: solutionController, maxLines: 2,
-              decoration: const InputDecoration(labelText: '维修方案')),
-          const SizedBox(height: 8),
-          // TODO(3.2.3) 维修前/后照片多图上传（必填）
-          OutlinedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.photo_camera_outlined),
-              label: const Text('上传维修前/后照片')),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(context, true),
-              child: const Text('提交完工')),
-        ],
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('完工提交'),
+          content: SizedBox(
+            width: 320,
+            child: ListView(shrinkWrap: true, children: [
+              TextField(controller: diagnosisController, maxLines: 2,
+                  decoration: const InputDecoration(labelText: '故障诊断')),
+              const SizedBox(height: 12),
+              TextField(controller: solutionController, maxLines: 2,
+                  decoration: const InputDecoration(labelText: '维修方案')),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                  onPressed: () async {
+                    await pickPhotos(beforeUrls);
+                    setDialogState(() {});
+                  },
+                  icon: const Icon(Icons.photo_camera_outlined),
+                  label: Text('维修前照片（${beforeUrls.length}）')),
+              photoStrip(beforeUrls),
+              OutlinedButton.icon(
+                  onPressed: () async {
+                    await pickPhotos(afterUrls);
+                    setDialogState(() {});
+                  },
+                  icon: const Icon(Icons.photo_camera),
+                  label: Text('维修后照片（${afterUrls.length}）')),
+              photoStrip(afterUrls),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false),
+                child: const Text('取消')),
+            FilledButton(onPressed: () => Navigator.pop(context, true),
+                child: const Text('提交完工')),
+          ],
+        ),
       ),
     );
     if (confirmed != true) return;
+    if (beforeUrls.isEmpty || afterUrls.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('请上传维修前后照片')));
+      }
+      return;
+    }
     await _post('/finish', body: {
       'diagnosis': diagnosisController.text,
       'solution': solutionController.text,
-      'beforePhotos': <String>['https://placeholder/before.jpg'],
-      'afterPhotos': <String>['https://placeholder/after.jpg'],
+      'beforePhotos': beforeUrls,
+      'afterPhotos': afterUrls,
       'partsReplaced': <String>[],
     }, successMsg: '已提交完工，等待客户验收');
   }

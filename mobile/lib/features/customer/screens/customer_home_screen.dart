@@ -74,7 +74,7 @@ class CustomerHomeScreen extends ConsumerWidget {
                 _QuickAction(icon: Icons.receipt_long, label: '我的工单',
                     onTap: () => context.push('/customer/orders')),
                 _QuickAction(icon: Icons.location_on_outlined, label: '地址管理',
-                    onTap: () {/* TODO(2.2.5) 地址管理页 */}),
+                    onTap: () => context.push('/customer/addresses')),
                 _QuickAction(icon: Icons.business_outlined, label: '企业信息',
                     onTap: () => context.push('/customer/profile')),
                 _QuickAction(icon: Icons.person_outline, label: '我的',

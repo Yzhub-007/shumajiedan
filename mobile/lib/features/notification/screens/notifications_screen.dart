@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/storage/token_storage.dart';
 import '../../../shared/widgets/common_widgets.dart';
 
 /// 通知中心（计划书 2.2.7 / 3.2.7：推送点击跳转对应工单）。
@@ -63,7 +65,23 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                 decoration: const BoxDecoration(
                                     color: Colors.red, shape: BoxShape.circle)),
                         onTap: () async {
-                          // TODO(3.2.7) 按 data.orderId 跳转对应工单详情并标记已读
+                          // 计划书 3.2.7：标记已读并按身份跳转对应工单
+                          final data = item['data'] as Map<String, dynamic>?;
+                          final orderId = data?['orderId'];
+                          try {
+                            await ref
+                                .read(apiClientProvider)
+                                .post('/api/notifications/${item['id']}/read');
+                          } catch (_) {}
+                          if (!context.mounted) return;
+                          if (orderId is int) {
+                            final isEngineer = TokenStorage.role == 'ENGINEER';
+                            context.push(isEngineer
+                                ? '/engineer/orders/$orderId'
+                                : '/customer/orders/$orderId');
+                          } else {
+                            _load();
+                          }
                         },
                       );
                     },

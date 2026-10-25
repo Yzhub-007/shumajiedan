@@ -47,7 +47,7 @@ class _CustomerProfileScreenState extends ConsumerState<CustomerProfileScreen> {
             leading: const Icon(Icons.location_on_outlined),
             title: const Text('常用地址'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {/* TODO(2.2.5) 地址管理页（地图选点） */},
+            onTap: () => context.push('/customer/addresses'),
           ),
           ListTile(
             leading: const Icon(Icons.notifications_outlined),

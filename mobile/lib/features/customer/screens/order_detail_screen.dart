@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../shared/widgets/common_widgets.dart';
+import '../../notification/realtime_service.dart';
 
-/// 客户端工单详情：状态时间轴 + 工程师卡片 + 操作按钮（计划书 2.2.4 / 3.2.5 / 3.2.6）。
+/// 客户端工单详情：状态时间轴 + 工程师卡片（拨号）+ 报价确认 + 维修报告 + 评价（计划书 3.2.5 / 3.2.6）。
+/// 订阅 WebSocket /topic/order/{id}，状态变更自动刷新。
 class OrderDetailScreen extends ConsumerStatefulWidget {
   const OrderDetailScreen({super.key, required this.orderId});
 
@@ -23,15 +26,21 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   void initState() {
     super.initState();
     _load();
+    RealtimeService.instance.subscribeOrder(widget.orderId, (_) => _load());
+  }
+
+  @override
+  void dispose() {
+    RealtimeService.instance.unsubscribeOrder(widget.orderId);
+    super.dispose();
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
     try {
       final data = await ref
           .read(apiClientProvider)
           .get('/api/orders/${widget.orderId}') as Map<String, dynamic>;
-      setState(() => _detail = data);
+      if (mounted) setState(() => _detail = data);
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
   }
@@ -54,12 +63,42 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     }
   }
 
+  Future<void> _callEngineer(String? phone) async {
+    if (phone == null || phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('暂无联系电话')));
+      return;
+    }
+    final uri = Uri(scheme: 'tel', path: phone);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('无法发起拨号')));
+    }
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _showReviewSheet() async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _ReviewSheet(orderId: widget.orderId),
+    );
+    if (result == true) {
+      _toast('评价成功，感谢反馈');
+      _load();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final order = _detail?['order'] as Map<String, dynamic>?;
     final status = order?['status']?.toString() ?? '';
     final logs = (_detail?['statusLogs'] as List<dynamic>? ?? []);
     final engineer = _detail?['engineer'] as Map<String, dynamic>?;
+    final report = _detail?['report'] as Map<String, dynamic>?;
 
     return Scaffold(
       appBar: AppBar(title: Text(order?['statusLabel']?.toString() ?? '工单详情')),
@@ -74,17 +113,52 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                       '${order?['deviceCategoryName'] ?? ""} ${order?['deviceBrand'] ?? ""}\n'
                       '${order?['faultDesc'] ?? ""}'),
                 ),
+                if ((order?['mediaUrls'] as List<dynamic>? ?? []).isNotEmpty)
+                  SectionCard(
+                    title: '故障照片',
+                    child: SizedBox(
+                      height: 90,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: (order?['mediaUrls'] as List).length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) => ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                              (order!['mediaUrls'] as List)[index].toString(),
+                              width: 90, height: 90, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  const SizedBox(width: 90, height: 90)),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (engineer != null)
                   SectionCard(
                     title: '服务工程师',
-                    trailing: TextButton(
-                      onPressed: () {/* TODO(2.2.x) 拨号联系 */},
-                      child: const Text('联系'),
+                    trailing: TextButton.icon(
+                      onPressed: () => _callEngineer(engineer['phone']?.toString()),
+                      icon: const Icon(Icons.phone_outlined, size: 18),
+                      label: const Text('联系'),
                     ),
                     child: Text(
                         '${engineer['realName'] ?? engineer['phone'] ?? ""}\n'
                         '评分 ${engineer['ratingAvg'] ?? "-"} · 完成 ${engineer['orderCount'] ?? 0} 单'),
-                    // TODO(3.2.5) 已接单页：拨号、地图实时位置（GET engineer-location 10s 轮询或 WS）
+                    // TODO(3.2.5) 前往中实时地图（engineer-location 轮询渲染到高德地图）
+                  ),
+                if (report != null)
+                  SectionCard(
+                    title: '维修报告',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('诊断：${report['diagnosis'] ?? "-"}'),
+                        const SizedBox(height: 4),
+                        Text('方案：${report['solution'] ?? "-"}'),
+                        const SizedBox(height: 8),
+                        _photoGrid('维修后照片', report['afterPhotos']),
+                      ],
+                    ),
                   ),
                 SectionCard(
                   title: '进度',
@@ -110,6 +184,30 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     );
   }
 
+  Widget _photoGrid(String title, dynamic photos) {
+    final list = (photos as List<dynamic>? ?? []).map((e) => e.toString()).toList();
+    if (list.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 90,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: list.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) => ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(list[index], width: 90, height: 90, fit: BoxFit.cover),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildActions(String status) {
     switch (status) {
       case 'PENDING':
@@ -124,14 +222,14 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         );
       case 'ARRIVED':
         final quotes = _detail?['quotes'] as List<dynamic>? ?? [];
-        final pendingQuote = quotes.isEmpty
-            ? null
-            : quotes.firstWhere((q) => q['status'] == 'PENDING', orElse: () => null);
-        if (pendingQuote == null) return const SizedBox.shrink();
+        final pendingQuotes = quotes.where((q) => q['status'] == 'PENDING').toList();
+        if (pendingQuotes.isEmpty) return const SizedBox.shrink();
+        final pendingQuote = pendingQuotes.first;
         return SectionCard(
           title: '维修报价（工时+配件）',
           child: Column(children: [
-            Text('合计 ¥${pendingQuote['total']}'),
+            Text('合计 ¥${pendingQuote['total']}',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Row(children: [
               Expanded(child: OutlinedButton(
@@ -167,12 +265,108 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: FilledButton(
-            onPressed: _acting ? null : () {/* TODO(3.2.6) 评价页：星级+标签+文字 */},
+            onPressed: _acting ? null : _showReviewSheet,
             child: const Text('评价本次服务'),
           ),
         );
       default:
         return const SizedBox.shrink();
     }
+  }
+}
+
+/// 评价面板（计划书 3.2.6）：星级 + 标签 + 文字。
+class _ReviewSheet extends ConsumerStatefulWidget {
+  const _ReviewSheet({required this.orderId});
+
+  final int orderId;
+
+  @override
+  ConsumerState<_ReviewSheet> createState() => _ReviewSheetState();
+}
+
+class _ReviewSheetState extends ConsumerState<_ReviewSheet> {
+  static const _tagOptions = ['专业高效', '沟通顺畅', '准时到达', '收费合理', '着装规范'];
+
+  int _score = 5;
+  final Set<String> _tags = {};
+  final _contentController = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _contentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => _submitting = true);
+    try {
+      await ref.read(apiClientProvider).post('/api/orders/${widget.orderId}/review', data: {
+        'score': _score,
+        'tags': _tags.toList(),
+        'content': _contentController.text.trim(),
+      });
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+          left: 16, right: 16, top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(child: Text('评价本次服务', style: Theme.of(context).textTheme.titleMedium)),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (index) {
+              return IconButton(
+                icon: Icon(
+                  index < _score ? Icons.star : Icons.star_border,
+                  color: Colors.amber,
+                  size: 36,
+                ),
+                onPressed: () => setState(() => _score = index + 1),
+              );
+            }),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: _tagOptions
+                .map((tag) => FilterChip(
+                      label: Text(tag),
+                      selected: _tags.contains(tag),
+                      onSelected: (selected) => setState(() {
+                        selected ? _tags.add(tag) : _tags.remove(tag);
+                      }),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _contentController,
+            maxLines: 3,
+            maxLength: 1000,
+            decoration: const InputDecoration(
+                labelText: '说点什么（选填）', alignLabelWithHint: true),
+          ),
+          const SizedBox(height: 12),
+          PrimaryButton(label: '提交评价', onPressed: _submit, loading: _submitting),
+        ],
+      ),
+    );
   }
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/controllers/auth_controller.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
+import '../../features/customer/screens/address_manage_screen.dart';
 import '../../features/customer/screens/create_order_screen.dart';
 import '../../features/customer/screens/customer_home_screen.dart';
 import '../../features/customer/screens/customer_order_list_screen.dart';
@@ -50,6 +51,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             OrderDetailScreen(orderId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
       ),
       GoRoute(path: '/customer/profile', builder: (_, __) => const CustomerProfileScreen()),
+      GoRoute(path: '/customer/addresses', builder: (_, __) => const AddressManageScreen()),
 
       // ---- 工程师端 ----
       GoRoute(path: '/engineer/home', builder: (_, __) => const EngineerHomeScreen()),

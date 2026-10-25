@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../shared/widgets/common_widgets.dart';
 
 /// 工程师端首页：接单开关 + 工单池 + 我的工单入口（计划书 3.2.1 / 3.2.2）。
-/// TODO(3.2.1) 后台定位服务（Android 前台服务 / iOS always 权限）+ 定时位置上报。
+/// 上线期间每 15 秒上报一次 GPS（后端 GEO 每次写、DB 节流 60s）。
+/// TODO(3.2.1) Android 前台服务保活 / iOS "始终"定位权限，避免退后台后上报中断。
 class EngineerHomeScreen extends ConsumerStatefulWidget {
   const EngineerHomeScreen({super.key});
 
@@ -17,6 +21,7 @@ class EngineerHomeScreen extends ConsumerStatefulWidget {
 class _EngineerHomeScreenState extends ConsumerState<EngineerHomeScreen> {
   bool _online = false;
   bool _toggling = false;
+  Timer? _locationTimer;
   List<dynamic> _pool = [];
   bool _loadingPool = true;
 
@@ -56,20 +61,55 @@ class _EngineerHomeScreenState extends ConsumerState<EngineerHomeScreen> {
   Future<void> _toggleOnline(bool value) async {
     setState(() => _toggling = true);
     try {
-      // TODO(3.2.1) 用 geolocator 取真实定位替换占位坐标
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 8),
+      );
       await ref.read(apiClientProvider).put('/api/engineer/online', data: {
         'online': value,
-        'lng': 121.4737,
-        'lat': 31.2304,
+        'lng': position.longitude,
+        'lat': position.latitude,
       });
       setState(() => _online = value);
+      if (value) {
+        _startLocationTimer();
+      } else {
+        _locationTimer?.cancel();
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.toString().contains('permission')
+                ? '定位权限未授权，上线需要定位'
+                : e.toString())));
       }
     } finally {
       if (mounted) setState(() => _toggling = false);
     }
+  }
+
+  void _startLocationTimer() {
+    _locationTimer?.cancel();
+    _locationTimer = Timer.periodic(const Duration(seconds: 15), (_) async {
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 8),
+        );
+        await ref.read(apiClientProvider).post('/api/engineer/location', data: {
+          'lng': position.longitude,
+          'lat': position.latitude,
+        });
+      } catch (_) {
+        // 定位失败静默跳过，下个周期重试
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _locationTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _grab(Map<String, dynamic> order) async {

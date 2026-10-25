@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../shared/widgets/common_widgets.dart';
 
-/// 发布工单（计划书 2.2.3，完整实现 4 人天）：
-/// 设备类型选择器、故障描述、拍照/相册/视频上传（压缩、进度）、地图选点、
-/// 时间选择、紧急程度。
+/// 发布工单（计划书 2.2.3）：设备类型、故障描述、拍照/相册上传（经 /api/upload）、
+/// 服务地址选择、期望上门时间、紧急程度。
 class CreateOrderScreen extends ConsumerStatefulWidget {
   const CreateOrderScreen({super.key});
 
@@ -20,16 +21,20 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   final _modelController = TextEditingController();
 
   List<Map<String, dynamic>> _categories = [];
+  List<Map<String, dynamic>> _addresses = [];
   int? _categoryId;
-  String _urgency = 'NORMAL';
   int? _addressId;
+  String _urgency = 'NORMAL';
+  DateTime? _expectTime;
+  final List<String> _mediaUrls = [];
+  bool _uploading = false;
   bool _submitting = false;
 
   @override
   void initState() {
     super.initState();
     _loadCategories();
-    _loadDefaultAddress();
+    _loadAddresses();
   }
 
   @override
@@ -47,24 +52,65 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         _categories = data.cast<Map<String, dynamic>>();
         if (_categories.isNotEmpty) _categoryId = _categories.first['id'] as int;
       });
-    } catch (_) {/* 空态由下拉框展示 */}
-  }
-
-  Future<void> _loadDefaultAddress() async {
-    try {
-      final data = await ref.read(apiClientProvider).get('/api/customer/addresses') as List<dynamic>;
-      final list = data.cast<Map<String, dynamic>>();
-      if (list.isEmpty) return;
-      final first = list.firstWhere((a) => a['isDefault'] == true, orElse: () => list.first);
-      setState(() => _addressId = first['id'] as int);
     } catch (_) {}
   }
 
+  Future<void> _loadAddresses() async {
+    try {
+      final data =
+          await ref.read(apiClientProvider).get('/api/customer/addresses') as List<dynamic>;
+      final list = data.cast<Map<String, dynamic>>();
+      setState(() {
+        _addresses = list;
+        if (list.isNotEmpty) {
+          final def = list.where((a) => a['isDefault'] == true).toList();
+          _addressId = (def.isNotEmpty ? def.first : list.first)['id'] as int;
+        }
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _pickAndUpload() async {
+    if (_uploading) return;
+    final picker = ImagePicker();
+    final files = await picker.pickMultiImage(imageQuality: 80, maxWidth: 1920);
+    if (files.isEmpty) return;
+    setState(() => _uploading = true);
+    for (final f in files) {
+      try {
+        final url = await ref.read(apiClientProvider).upload(f.path);
+        setState(() => _mediaUrls.add(url));
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('图片上传失败：$e')));
+        }
+      }
+    }
+    if (mounted) setState(() => _uploading = false);
+  }
+
+  Future<void> _pickExpectTime() async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 30)),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(now.add(const Duration(hours: 2))),
+    );
+    if (time == null) return;
+    setState(() => _expectTime = DateTime(date.year, date.month, date.day, time.hour, time.minute));
+  }
+
   Future<void> _submit() async {
-    if (_categoryId == null || _addressId == null ||
-        _descController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请完善设备类型、服务地址与故障描述')));
+    if (_categoryId == null || _addressId == null || _descController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('请完善设备类型、服务地址与故障描述')));
       return;
     }
     setState(() => _submitting = true);
@@ -74,13 +120,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         'deviceBrand': _brandController.text.trim(),
         'deviceModel': _modelController.text.trim(),
         'faultDesc': _descController.text.trim(),
-        'mediaUrls': <String>[],
+        'mediaUrls': _mediaUrls,
         'addressId': _addressId,
         'urgency': _urgency,
+        'expectTime': _expectTime?.toIso8601String(),
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('发布成功，等待工程师接单')));
+          .showSnackBar(const SnackBar(content: Text('发布成功，正在为你匹配附近工程师')));
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
@@ -127,19 +174,80 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 labelText: '故障描述', alignLabelWithHint: true),
           ),
           const SizedBox(height: 8),
-          // TODO(2.2.3) 拍照/相册/视频上传：image_picker + OSS 预签名直传（/api/upload/presign）
-          OutlinedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.camera_alt_outlined),
-            label: const Text('添加故障照片/视频'),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: _uploading ? null : _pickAndUpload,
+                icon: const Icon(Icons.camera_alt_outlined),
+                label: Text(_uploading ? '上传中...' : '添加故障照片（${_mediaUrls.length}）'),
+              ),
+              // TODO(1.3.2) 视频拍摄上传与压缩
+            ],
+          ),
+          if (_mediaUrls.isNotEmpty)
+            SizedBox(
+              height: 84,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _mediaUrls.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) => Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(_mediaUrls[index],
+                          width: 84, height: 84, fit: BoxFit.cover),
+                    ),
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: InkWell(
+                        onTap: () => setState(() => _mediaUrls.removeAt(index)),
+                        child: const Icon(Icons.cancel, size: 20),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<int>(
+                  value: _addressId,
+                  decoration: const InputDecoration(labelText: '服务地址'),
+                  items: _addresses
+                      .map((a) => DropdownMenuItem<int>(
+                            value: a['id'] as int,
+                            child: Text(
+                              '${a["label"] ?? "地址"} · ${a["detail"] ?? ""}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ))
+                      .toList(),
+                  onChanged: (value) => setState(() => _addressId = value),
+                ),
+              ),
+              TextButton(
+                onPressed: () async {
+                  await context.push('/customer/addresses');
+                  _loadAddresses();
+                },
+                child: const Text('管理'),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          // TODO(2.2.3) 地图选点页（高德），当前仅用默认地址
-          DropdownButtonFormField<int>(
-            value: _addressId,
-            decoration: const InputDecoration(labelText: '服务地址'),
-            items: const [],
-            onChanged: (value) => setState(() => _addressId = value),
+          InkWell(
+            onTap: _pickExpectTime,
+            child: InputDecorator(
+              decoration: const InputDecoration(labelText: '期望上门时间（选填）'),
+              child: Text(_expectTime == null
+                  ? '尽快上门'
+                  : '${_expectTime!.month}月${_expectTime!.day}日 '
+                      '${_expectTime!.hour.toString().padLeft(2, "0")}:${_expectTime!.minute.toString().padLeft(2, "0")}'),
+            ),
           ),
           const SizedBox(height: 12),
           SegmentedButton<String>(
@@ -151,8 +259,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             selected: {_urgency},
             onSelectionChanged: (s) => setState(() => _urgency = s.first),
           ),
-          const SizedBox(height: 12),
-          // TODO(2.2.3) 期望上门时间选择器
           const SizedBox(height: 16),
           PrimaryButton(label: '提交工单', onPressed: _submit, loading: _submitting),
         ],
