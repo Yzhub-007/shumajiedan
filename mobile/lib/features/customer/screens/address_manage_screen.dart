@@ -5,7 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import '../../../core/network/api_client.dart';
 import '../../../shared/widgets/common_widgets.dart';
 
-/// 地址管理：增删改、默认地址、地图选点（当前用 GPS 定位占位，TODO(2.2.5) 接高德地图选点页）。
+/// 地址管理：增删改、默认地址、定位取坐标（TODO(2.2.5) 接高德地图选点页）。
 class AddressManageScreen extends ConsumerStatefulWidget {
   const AddressManageScreen({super.key});
 
@@ -63,6 +63,7 @@ class _AddressManageScreenState extends ConsumerState<AddressManageScreen> {
   }
 
   void _toast(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(SnackBar(content: Text(message)));
   }
 
@@ -157,10 +158,11 @@ class _AddressEditorState extends ConsumerState<_AddressEditor> {
   late final TextEditingController _city;
   late final TextEditingController _district;
   late final TextEditingController _detail;
-  double? _lng;
-  double? _lat;
+  late final TextEditingController _lngCtrl;
+  late final TextEditingController _latCtrl;
   bool _isDefault = false;
   bool _saving = false;
+  bool _locating = false;
 
   @override
   void initState() {
@@ -171,8 +173,12 @@ class _AddressEditorState extends ConsumerState<_AddressEditor> {
     _city = TextEditingController(text: e?['city']?.toString());
     _district = TextEditingController(text: e?['district']?.toString());
     _detail = TextEditingController(text: e?['detail']?.toString());
-    _lng = (e?['lng'] as num?)?.toDouble();
-    _lat = (e?['lat'] as num?)?.toDouble();
+    final lng = (e?['lng'] as num?)?.toDouble();
+    final lat = (e?['lat'] as num?)?.toDouble();
+    _lngCtrl = TextEditingController(
+        text: lng == null || lng == 0 ? '' : lng.toStringAsFixed(6));
+    _latCtrl = TextEditingController(
+        text: lat == null || lat == 0 ? '' : lat.toStringAsFixed(6));
     _isDefault = e?['isDefault'] == true;
   }
 
@@ -183,35 +189,82 @@ class _AddressEditorState extends ConsumerState<_AddressEditor> {
     _city.dispose();
     _district.dispose();
     _detail.dispose();
+    _lngCtrl.dispose();
+    _latCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _useCurrentLocation() async {
+    if (_locating) return;
+    setState(() => _locating = true);
     try {
+      final serviceOn = await Geolocator.isLocationServiceEnabled();
+      if (!serviceOn) {
+        _askOpen(() => Geolocator.openLocationSettings(), '定位服务未开启',
+            '请在系统设置中打开定位服务后重试');
+        return;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied) {
+        _toast('未授予定位权限，可重试授权或使用手动填写坐标');
+        return;
+      }
+      if (permission == LocationPermission.deniedForever) {
+        _askOpen(() => Geolocator.openAppSettings(), '定位权限被永久拒绝',
+            '请在应用设置中允许"机器报修"使用位置信息');
+        return;
+      }
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 8),
+        timeLimit: const Duration(seconds: 15),
       );
-      setState(() {
-        _lng = position.longitude;
-        _lat = position.latitude;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('已获取定位（${_lng!.toStringAsFixed(5)}, ${_lat!.toStringAsFixed(5)}）')));
-      }
+      _fillCoords(position.longitude, position.latitude);
+      _toast('定位成功');
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('定位失败，请检查定位权限')));
-      }
+      _toast('定位超时（室内信号弱）。可再试一次，或展开下方手动填写坐标');
+    } finally {
+      if (mounted) setState(() => _locating = false);
     }
   }
 
+  void _fillCoords(double lng, double lat) {
+    _lngCtrl.text = lng.toStringAsFixed(6);
+    _latCtrl.text = lat.toStringAsFixed(6);
+  }
+
+  void _askOpen(Future<void> Function() open, String title, String message) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('取消')),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              open();
+            },
+            child: const Text('去设置'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _save() async {
-    if (_detail.text.trim().isEmpty || _lng == null || _lat == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('请填写详细地址并获取坐标')));
+    final detail = _detail.text.trim();
+    final lng = double.tryParse(_lngCtrl.text.trim());
+    final lat = double.tryParse(_latCtrl.text.trim());
+    if (detail.isEmpty) {
+      _toast('请填写详细地址');
+      return;
+    }
+    if (lng == null || lat == null) {
+      _toast('缺少坐标：请先定位成功，或展开"手动填写坐标"输入');
       return;
     }
     setState(() => _saving = true);
@@ -220,9 +273,9 @@ class _AddressEditorState extends ConsumerState<_AddressEditor> {
       'province': _province.text.trim(),
       'city': _city.text.trim(),
       'district': _district.text.trim(),
-      'detail': _detail.text.trim(),
-      'lng': _lng,
-      'lat': _lat,
+      'detail': detail,
+      'lng': lng,
+      'lat': lat,
       'isDefault': _isDefault,
     };
     try {
@@ -235,12 +288,15 @@ class _AddressEditorState extends ConsumerState<_AddressEditor> {
       }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      _toast('保存失败：$e');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  void _toast(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -265,26 +321,61 @@ class _AddressEditorState extends ConsumerState<_AddressEditor> {
             TextField(controller: _detail, decoration: const InputDecoration(labelText: '详细地址')),
             const SizedBox(height: 8),
             Row(children: [
-              OutlinedButton.icon(
-                onPressed: _useCurrentLocation,
-                icon: const Icon(Icons.gps_fixed, size: 18),
-                label: Text(_lng == null ? '使用当前位置' : '已定位'),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _locating ? null : _useCurrentLocation,
+                  icon: _locating
+                      ? const SizedBox(width: 16, height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.gps_fixed, size: 18),
+                  label: Text(_locating
+                      ? '定位中...'
+                      : (_lngCtrl.text.isEmpty ? '使用当前位置' : '重新定位')),
+                ),
               ),
-              const Spacer(),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('默认地址'),
-                value: _isDefault,
-                onChanged: (v) => setState(() => _isDefault = v),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('设为默认'),
+                  value: _isDefault,
+                  onChanged: (v) => setState(() => _isDefault = v),
+                ),
               ),
             ]),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: EdgeInsets.zero,
+              title: const Text('手动填写坐标（定位不可用时）', style: TextStyle(fontSize: 13)),
+              children: [
+                Row(children: [
+                  Expanded(child: TextField(
+                      controller: _lngCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(labelText: '经度', hintText: '如 121.473700'))),
+                  const SizedBox(width: 8),
+                  Expanded(child: TextField(
+                      controller: _latCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(labelText: '纬度', hintText: '如 31.230400'))),
+                ]),
+                const SizedBox(height: 4),
+              ],
+            ),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
-        FilledButton(onPressed: _saving ? null : _save, child: const Text('保存')),
+        TextButton(onPressed: _saving ? null : () => Navigator.pop(context, false),
+            child: const Text('取消')),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(width: 18, height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('保存'),
+        ),
       ],
     );
   }
