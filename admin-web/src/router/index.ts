@@ -32,7 +32,22 @@ const router = createRouter({
         {
           path: 'categories',
           component: () => import('../views/category/index.vue'),
-          meta: { title: '价格配置', icon: 'PriceTag' }
+          meta: { title: '价格配置', icon: 'PriceTag', superAdminOnly: true }
+        },
+        {
+          path: 'withdrawals',
+          component: () => import('../views/withdrawal/index.vue'),
+          meta: { title: '提现审核', icon: 'Money', superAdminOnly: true }
+        },
+        {
+          path: 'users',
+          component: () => import('../views/user/index.vue'),
+          meta: { title: '用户管理', icon: 'User' }
+        },
+        {
+          path: 'reviews',
+          component: () => import('../views/review/index.vue'),
+          meta: { title: '评价管理', icon: 'ChatDotRound' }
         },
         {
           path: 'stats',

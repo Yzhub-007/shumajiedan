@@ -104,3 +104,44 @@ export const disableCategory = (id: number) =>
 
 // ---------- 统计 ----------
 export const statsOverview = () => http.get('/admin/stats/overview')
+
+// ---------- 提现审核（仅 SUPER_ADMIN） ----------
+export interface WithdrawalRow {
+  id: number
+  userId: number
+  amount: number
+  status: string
+  accountInfo: string | Record<string, unknown>
+  reviewedBy: number | null
+  rejectReason: string | null
+  createdAt: string
+}
+
+export const listWithdrawals = (params: { status?: string; page: number; size: number }) =>
+  http.get<never, { list: WithdrawalRow[]; total: number }>('/admin/withdrawals', { params })
+
+export const approveWithdrawal = (id: number) => http.post(`/admin/withdrawals/${id}/approve`)
+
+export const rejectWithdrawal = (id: number, reason: string) =>
+  http.post(`/admin/withdrawals/${id}/reject`, { reason })
+
+// ---------- 用户管理 ----------
+export interface UserRow {
+  id: number
+  phone: string
+  nickname: string
+  role: string
+  status: string
+  createdAt: string
+}
+
+export const listUsers = (params: { role?: string; page: number; size: number }) =>
+  http.get<never, { list: UserRow[]; total: number }>('/admin/users', { params })
+
+export const disableUser = (id: number) => http.post(`/admin/users/${id}/disable`)
+
+export const enableUser = (id: number) => http.post(`/admin/users/${id}/enable`)
+
+// ---------- 评价管理 ----------
+export const listReviews = (params: { page: number; size: number }) =>
+  http.get<never, { list: Record<string, any>[]; total: number }>('/admin/reviews', { params })

@@ -9,7 +9,11 @@
         text-color="#a7b1c2"
         active-text-color="#ffffff"
       >
-        <el-menu-item v-for="item in menus" :key="item.path" :index="item.path">
+        <el-menu-item
+          v-for="item in menus"
+          :key="item.path"
+          :index="item.path"
+        >
           <el-icon><component :is="item.icon" /></el-icon>
           <span>{{ item.title }}</span>
         </el-menu-item>
@@ -50,7 +54,8 @@ const userStore = useUserStore()
 const menus = computed(() =>
   router.options.routes
     .find((r) => r.path === '/')
-    ?.children?.map((c) => ({
+    ?.children?.filter((c) => !c.meta?.superAdminOnly || userStore.isSuperAdmin)
+    .map((c) => ({
       path: `/${c.path}`,
       title: c.meta?.title as string,
       icon: c.meta?.icon as string
