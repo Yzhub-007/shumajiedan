@@ -57,6 +57,11 @@ public class OrderActionService {
                     order.setCancelReason(remark);
                 }
             }
+            case RELEASE -> {
+                // 超时释放回单池：清空接单工程师（计划书 2.2：ACCEPTED 超时未出发自动释放）
+                order.setEngineerId(null);
+                order.setAcceptedAt(null);
+            }
             default -> {
             }
         }

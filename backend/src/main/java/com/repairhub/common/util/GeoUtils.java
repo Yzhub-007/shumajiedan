@@ -20,4 +20,12 @@ public final class GeoUtils {
                 + Math.cos(radLat1) * Math.cos(radLat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
         return EARTH_RADIUS_M * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
+
+    /** 工单地址到工程师最近上报位置的距离（米） */
+    public static double distanceTo(com.repairhub.order.entity.Order order,
+                                    com.repairhub.user.entity.EngineerProfile profile) {
+        return distanceMeters(order.getLng(), order.getLat(),
+                profile.getLastLng() == null ? 0 : profile.getLastLng(),
+                profile.getLastLat() == null ? 0 : profile.getLastLat());
+    }
 }

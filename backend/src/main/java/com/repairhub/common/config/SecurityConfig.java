@@ -47,6 +47,7 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/actuator/**",
                                 "/ws/**",
+                                "/uploads/**",
                                 "/error").permitAll()
                         .requestMatchers("/api/customer/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/engineer/**").hasRole("ENGINEER")

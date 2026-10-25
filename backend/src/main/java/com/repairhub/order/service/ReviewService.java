@@ -3,6 +3,7 @@ package com.repairhub.order.service;
 import com.repairhub.common.exception.BizException;
 import com.repairhub.common.exception.ErrorCode;
 import com.repairhub.common.util.JsonUtils;
+import com.repairhub.notify.service.NotificationService;
 import com.repairhub.order.dto.ReviewRequest;
 import com.repairhub.order.entity.Order;
 import com.repairhub.order.entity.Review;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Map;
 
 /**
  * 双向评价 + 工程师评分聚合（计划书 3.1.9）。
@@ -29,6 +31,7 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final EngineerProfileRepository engineerProfileRepository;
     private final OrderActionService orderActionService;
+    private final NotificationService notificationService;
 
     @Transactional
     public void submit(Long orderId, Long fromUserId, ReviewRequest request) {
@@ -55,6 +58,10 @@ public class ReviewService {
         review.setTags(JsonUtils.write(request.getTags()));
         review.setContent(request.getContent());
         reviewRepository.save(review);
+
+        notificationService.send(toUserId, "NEW_REVIEW", "收到新的评价",
+                "工单 " + order.getOrderNo() + " 收到 " + request.getScore() + " 星评价",
+                Map.of("orderId", orderId));
 
         if (!fromCustomer) {
             return;

@@ -18,4 +18,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     /** 工程师评分聚合（计划书 3.1.9） */
     @Query("SELECT COALESCE(AVG(r.score), 5) FROM Review r WHERE r.toUserId = :userId")
     Double avgScoreByToUserId(@Param("userId") Long userId);
+
+    /** 全平台平均评分 */
+    @Query("SELECT AVG(r.score) FROM Review r")
+    Double avgScore();
 }

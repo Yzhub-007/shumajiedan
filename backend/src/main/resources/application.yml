@@ -28,6 +28,8 @@ app:
       access-key: minioadmin
       secret-key: minioadmin
       bucket: repairhub
+    # mock 模式本地落盘目录（开发联调用，随 /uploads/** 静态可访问）
+    local-dir: ./data/uploads
   order:
     # MVP 不接支付：验收通过直接完成；V1.1 置为 true 后走 PENDING_PAYMENT
     payment-enabled: false
@@ -41,6 +43,11 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+logging:
+  pattern:
+    # 日志带 requestId，配合 RequestIdFilter 贯穿一次请求的所有日志
+    level: "%5p [${spring.application.name:},%X{requestId:-}]"
 
 management:
   endpoints:

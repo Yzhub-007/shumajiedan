@@ -13,4 +13,6 @@ public interface EngineerProfileRepository extends JpaRepository<EngineerProfile
     Page<EngineerProfile> findByVerifyStatus(VerifyStatus verifyStatus, Pageable pageable);
 
     List<EngineerProfile> findByVerifyStatus(VerifyStatus verifyStatus);
+
+    List<EngineerProfile> findTop10ByOrderByOrderCountDesc();
 }

@@ -12,9 +12,11 @@ import com.repairhub.user.entity.VerifyStatus;
 import com.repairhub.user.repository.EngineerProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -30,6 +32,7 @@ public class EngineerService {
     private final EngineerProfileRepository engineerProfileRepository;
     private final EngineerLocationService engineerLocationService;
     private final NotificationService notificationService;
+    private final StringRedisTemplate redis;
 
     @Transactional
     public EngineerProfileResponse submitVerify(Long userId, EngineerVerifyRequest request) {
@@ -94,7 +97,7 @@ public class EngineerService {
         }
     }
 
-    /** 位置上报：GEO 必写；DB 节流写（TODO(3.1.1) 60s 一次，避免高频更新） */
+    /** 位置上报：Redis GEO 每次必写；DB 节流为 60 秒一次（计划书 3.1.1，避免高频更新） */
     @Transactional
     public void reportLocation(Long userId, double lng, double lat) {
         EngineerProfile profile = requireProfile(userId);
@@ -102,6 +105,11 @@ public class EngineerService {
             return;
         }
         engineerLocationService.online(userId, lng, lat);
+        Boolean firstInWindow = redis.opsForValue()
+                .setIfAbsent("loc:db:" + userId, "1", Duration.ofSeconds(60));
+        if (!Boolean.TRUE.equals(firstInWindow)) {
+            return;
+        }
         profile.setLastLng(lng);
         profile.setLastLat(lat);
         profile.setLastLocationAt(LocalDateTime.now());

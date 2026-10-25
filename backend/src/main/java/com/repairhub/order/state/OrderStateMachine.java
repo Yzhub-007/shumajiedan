@@ -87,7 +87,8 @@ public final class OrderStateMachine {
         register(REPAIRING, OrderAction.CLOSE_UNRESOLVED, CLOSED_UNRESOLVED, UserRole.ENGINEER, UserRole.ADMIN);
 
         // 验收通过：MVP 未开支付直接完成；V1.1 开启支付后由 OrderActionService 覆写目标为 PENDING_PAYMENT
-        register(PENDING_CONFIRM, OrderAction.CONFIRM_FINISH, COMPLETED, UserRole.CUSTOMER);
+        // SYSTEM 用于 48 小时未验收的自动通过（计划书 2.2 超时规则）
+        register(PENDING_CONFIRM, OrderAction.CONFIRM_FINISH, COMPLETED, UserRole.CUSTOMER, UserRole.SYSTEM);
         register(PENDING_CONFIRM, OrderAction.REJECT_FINISH, REPAIRING, UserRole.CUSTOMER);
 
         // 支付（V1.1）

@@ -5,6 +5,7 @@ import com.repairhub.admin.service.AdminOrderService;
 import com.repairhub.auth.security.SecurityUtils;
 import com.repairhub.common.response.ApiResponse;
 import com.repairhub.common.response.PageResult;
+import com.repairhub.dispatch.service.DispatchService;
 import com.repairhub.order.dto.OrderResponse;
 import com.repairhub.order.dto.ReasonRequest;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
  * 后台工单监控与人工干预（计划书 2.3.1 / 3.3.1）。
  */
@@ -29,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminOrderController {
 
     private final AdminOrderService adminOrderService;
+    private final DispatchService dispatchService;
 
     @Operation(summary = "工单列表（订单号搜索 / 状态筛选）")
     @GetMapping
@@ -38,6 +42,12 @@ public class AdminOrderController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ApiResponse.ok(adminOrderService.page(status, keyword, page, size));
+    }
+
+    @Operation(summary = "附近在线工程师候选人（指派/改派选人用）")
+    @GetMapping("/{id}/nearby-engineers")
+    public ApiResponse<List<DispatchService.NearbyEngineerView>> nearbyEngineers(@PathVariable Long id) {
+        return ApiResponse.ok(dispatchService.listNearbyForOrder(id));
     }
 
     @Operation(summary = "指派工程师")
