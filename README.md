@@ -51,6 +51,14 @@ mvn spring-boot:run
 - 后台管理员：`admin / admin123`（`admins` 表，登录 `/admin/auth/login`）
 - 设备类型字典：注塑机、CNC 加工中心、制冷设备、空压机、餐饮厨房设备
 
+### 2.5 全链路冒烟测试（可选）
+
+```bash
+# 需要 PG/Redis/RabbitMQ 已启动；脚本会走完 发单→抢单→上门→报价→验收→支付→钱包→评价→提现 全链路
+APP_ORDER_PAYMENT_ENABLED=true mvn spring-boot:run   # 开启支付开关后启动后端
+bash docs/e2e-smoke.sh                               # 预期输出 ALL GREEN（48 项断言）
+```
+
 ### 3. 管理后台（需 Node 18+）
 
 ```bash
