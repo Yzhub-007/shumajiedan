@@ -1,6 +1,6 @@
 <template>
   <el-card class="page-card">
-    <el-table :data="rows" border v-loading="loading">
+    <el-table :data="rows" v-loading="loading">
       <el-table-column prop="id" label="ID" width="70" />
       <el-table-column prop="orderId" label="工单 ID" width="90" />
       <el-table-column prop="fromUserId" label="评价人" width="90" />

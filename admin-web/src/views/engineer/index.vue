@@ -15,7 +15,7 @@
       <el-button :icon="Refresh" @click="load" />
     </div>
 
-    <el-table :data="rows" border v-loading="loading">
+    <el-table :data="rows" v-loading="loading">
       <el-table-column prop="userId" label="ID" width="70" />
       <el-table-column prop="realName" label="姓名" width="110" />
       <el-table-column prop="idCardNo" label="身份证号" width="210" />

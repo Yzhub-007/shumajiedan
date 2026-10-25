@@ -20,7 +20,7 @@
       <el-button type="primary" @click="onFilter">查询</el-button>
     </div>
 
-    <el-table :data="rows" border v-loading="loading">
+    <el-table :data="rows" v-loading="loading">
       <el-table-column prop="orderNo" label="订单号" width="190" />
       <el-table-column prop="deviceCategoryName" label="设备类型" width="110" />
       <el-table-column prop="faultDesc" label="故障描述" min-width="170" show-overflow-tooltip />
@@ -158,7 +158,7 @@
         </el-timeline>
 
         <h4>报价记录</h4>
-        <el-table v-if="detail.quotes.length" :data="detail.quotes" size="small" border>
+        <el-table v-if="detail.quotes.length" :data="detail.quotes" size="small">
           <el-table-column prop="laborFee" label="工时费" width="90" />
           <el-table-column prop="partsFee" label="配件费" width="90" />
           <el-table-column prop="total" label="合计" width="90" />
@@ -354,7 +354,7 @@ onMounted(load)
 .photo {
   width: 72px;
   height: 72px;
-  border-radius: 6px;
+  border-radius: 10px;
 }
 .muted {
   color: #999;

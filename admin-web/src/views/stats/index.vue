@@ -34,7 +34,7 @@
 
     <el-card class="mt">
       <template #header>工程师接单排行 Top10（按完成单数）</template>
-      <el-table :data="overview.engineerRanking ?? []" border size="small">
+      <el-table :data="overview.engineerRanking ?? []" size="small">
         <el-table-column type="index" label="#" width="60" />
         <el-table-column prop="realName" label="姓名" min-width="120" />
         <el-table-column prop="orderCount" label="完成单数" width="110" />

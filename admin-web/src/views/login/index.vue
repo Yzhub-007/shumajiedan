@@ -1,7 +1,9 @@
 <template>
   <div class="login-page">
-    <el-card class="login-card">
-      <h2 class="title">机器报修平台 · 管理后台</h2>
+    <div class="login-card">
+      <div class="logo-mark">🔧</div>
+      <h2 class="title">机器报修平台</h2>
+      <div class="subtitle">管理控制台</div>
       <el-form :model="form" size="large" @keyup.enter="onLogin">
         <el-form-item>
           <el-input v-model="form.username" placeholder="用户名" :prefix-icon="User" />
@@ -20,7 +22,7 @@
         </el-button>
         <div class="tip">默认账号 admin / admin123（请上线前修改）</div>
       </el-form>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -58,23 +60,60 @@ const onLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1e5aa8 0%, #16324f 100%);
+  background:
+    radial-gradient(1200px 600px at 15% 0%, rgba(62, 123, 200, 0.35), transparent 60%),
+    radial-gradient(1000px 500px at 100% 100%, rgba(30, 90, 168, 0.5), transparent 55%),
+    linear-gradient(160deg, #14243c 0%, #1e5aa8 55%, #16406f 100%);
 }
+
 .login-card {
-  width: 380px;
-  padding: 12px 8px;
+  width: 400px;
+  padding: 44px 36px 32px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
 }
+
+.logo-mark {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  background: linear-gradient(135deg, #1e5aa8, #3e7bc8);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(30, 90, 168, 0.35);
+}
+
 .title {
   text-align: center;
-  margin: 8px 0 24px;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1d1d1f;
+  letter-spacing: 0.2px;
 }
+.subtitle {
+  text-align: center;
+  margin: 4px 0 26px;
+  font-size: 13px;
+  color: #86868b;
+}
+
 .login-btn {
   width: 100%;
+  height: 44px;
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 4px;
 }
 .tip {
-  margin-top: 12px;
+  margin-top: 14px;
   text-align: center;
-  color: #999;
+  color: #a1a1a6;
   font-size: 12px;
 }
 </style>

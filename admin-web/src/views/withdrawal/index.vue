@@ -9,7 +9,7 @@
       <el-button :icon="Refresh" @click="load" />
     </div>
 
-    <el-table :data="rows" border v-loading="loading">
+    <el-table :data="rows" v-loading="loading">
       <el-table-column prop="id" label="ID" width="70" />
       <el-table-column prop="userId" label="工程师 ID" width="100" />
       <el-table-column prop="amount" label="金额（元）" width="110" />

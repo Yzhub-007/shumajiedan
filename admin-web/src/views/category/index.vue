@@ -5,7 +5,7 @@
       <el-button type="primary" :icon="Plus" @click="openDialog()">新增类型</el-button>
     </div>
 
-    <el-table :data="rows" border v-loading="loading">
+    <el-table :data="rows" v-loading="loading">
       <el-table-column prop="id" label="ID" width="70" />
       <el-table-column prop="name" label="名称" min-width="160" />
       <el-table-column label="基础费（元）" width="130">

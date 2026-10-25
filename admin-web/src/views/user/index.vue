@@ -8,7 +8,7 @@
       <el-button :icon="Refresh" @click="load" />
     </div>
 
-    <el-table :data="rows" border v-loading="loading">
+    <el-table :data="rows" v-loading="loading">
       <el-table-column prop="id" label="ID" width="70" />
       <el-table-column prop="phone" label="手机号（脱敏）" width="150" />
       <el-table-column prop="nickname" label="昵称" min-width="120" />

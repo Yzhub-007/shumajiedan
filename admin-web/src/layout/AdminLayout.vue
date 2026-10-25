@@ -1,13 +1,17 @@
 <template>
   <el-container class="layout">
-    <el-aside width="220px" class="aside">
-      <div class="logo">🔧 机器报修平台</div>
+    <el-aside width="232px" class="aside">
+      <div class="logo">
+        <div class="logo-mark">🔧</div>
+        <div class="logo-text">
+          <div class="logo-title">机器报修平台</div>
+          <div class="logo-sub">管理控制台</div>
+        </div>
+      </div>
       <el-menu
+        class="menu"
         :default-active="$route.path"
         router
-        background-color="#1d2935"
-        text-color="#a7b1c2"
-        active-text-color="#ffffff"
       >
         <el-menu-item
           v-for="item in menus"
@@ -22,12 +26,14 @@
 
     <el-container>
       <el-header class="header">
-        <div />
+        <div class="page-title">{{ pageTitle }}</div>
         <el-dropdown @command="onCommand">
           <span class="user">
-            <el-icon class="user-icon"><UserFilled /></el-icon>
+            <span class="user-avatar">
+              <el-icon><UserFilled /></el-icon>
+            </span>
             {{ userStore.username || '管理员' }}
-            <el-icon><ArrowDown /></el-icon>
+            <el-icon class="user-arrow"><ArrowDown /></el-icon>
           </span>
           <template #dropdown>
             <el-dropdown-menu>
@@ -45,11 +51,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 
+const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+
+const pageTitle = computed(() => (route.meta?.title as string) ?? '')
 
 const menus = computed(() =>
   router.options.routes
@@ -74,35 +83,109 @@ const onCommand = (command: string) => {
 .layout {
   height: 100%;
 }
+
+/* 亮色侧栏（Apple 设置 / Finder 风格） */
 .aside {
-  background: #1d2935;
+  background: #fbfbfd;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
 }
+
 .logo {
-  height: 56px;
-  line-height: 56px;
-  text-align: center;
-  color: #fff;
-  font-weight: 600;
-  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 64px;
+  padding: 0 18px;
 }
+.logo-mark {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: linear-gradient(135deg, #1e5aa8, #3e7bc8);
+  border-radius: 10px;
+}
+.logo-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1d1d1f;
+  line-height: 1.2;
+}
+.logo-sub {
+  font-size: 11px;
+  color: #86868b;
+  margin-top: 1px;
+}
+
+.menu {
+  border-right: none;
+  background: transparent;
+  padding: 4px 0;
+}
+.menu :deep(.el-menu-item) {
+  height: 44px;
+  line-height: 44px;
+  margin: 2px 10px;
+  border-radius: 10px;
+  color: #424245;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.menu :deep(.el-menu-item:hover) {
+  background: #f0f0f3;
+}
+.menu :deep(.el-menu-item.is-active) {
+  background: rgba(30, 90, 168, 0.1);
+  color: #1e5aa8;
+  font-weight: 600;
+}
+
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #eee;
-  background: #fff;
+  height: 60px;
+  background: #ffffff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.page-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1d1d1f;
 }
 .user {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #1d1d1f;
+  font-size: 13.5px;
+  outline: none;
+  transition: background-color 0.15s ease;
 }
-.user-icon {
-  margin-right: 4px;
+.user:hover {
+  background: #f5f5f7;
 }
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(30, 90, 168, 0.1);
+  color: #1e5aa8;
+}
+.user-arrow {
+  font-size: 12px;
+  color: #86868b;
+}
+
 .main {
-  background: #f5f7fa;
+  background: #f5f5f7;
   padding: 0;
 }
 </style>
