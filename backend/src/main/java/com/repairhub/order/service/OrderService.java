@@ -5,6 +5,7 @@ import com.repairhub.common.exception.BizException;
 import com.repairhub.common.exception.ErrorCode;
 import com.repairhub.common.response.PageResult;
 import com.repairhub.order.dto.CreateOrderRequest;
+import com.repairhub.order.dto.DeviceHistoryResponse;
 import com.repairhub.order.dto.OrderDetailResponse;
 import com.repairhub.order.dto.OrderResponse;
 import com.repairhub.order.dto.QuoteResponse;
@@ -71,9 +72,25 @@ public class OrderService {
 
     @Transactional
     public OrderResponse create(CreateOrderRequest request, Long customerId) {
-        DeviceCategory category = deviceCategoryRepository.findById(request.getDeviceCategoryId())
-                .filter(c -> Boolean.TRUE.equals(c.getEnabled()))
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "设备类型不存在或已停用"));
+        String typeInput = request.getDeviceCategoryInput() == null
+                ? null : request.getDeviceCategoryInput().trim();
+        if (request.getDeviceCategoryId() == null && (typeInput == null || typeInput.isBlank())) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "设备类型不能为空");
+        }
+        DeviceCategory category;
+        if (request.getDeviceCategoryId() != null) {
+            category = deviceCategoryRepository.findById(request.getDeviceCategoryId())
+                    .filter(c -> Boolean.TRUE.equals(c.getEnabled()))
+                    .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "设备类型不存在或已停用"));
+        } else {
+            // 手动输入：文本与启用字典名一致时回填关联，保留计价与技能匹配
+            category = deviceCategoryRepository.findFirstByNameIgnoreCaseAndEnabledTrue(typeInput)
+                    .orElse(null);
+        }
+        // 冗余名称快照：字典后续改名/停用不影响历史工单展示与推荐
+        if (typeInput == null && category != null) {
+            typeInput = category.getName();
+        }
         Address address = addressRepository.findById(request.getAddressId())
                 .filter(a -> a.getUserId().equals(customerId))
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "服务地址不存在"));
@@ -82,7 +99,8 @@ public class OrderService {
         Order order = new Order();
         order.setOrderNo(nextOrderNo());
         order.setCustomerId(customerId);
-        order.setDeviceCategoryId(category.getId());
+        order.setDeviceCategoryId(category == null ? null : category.getId());
+        order.setDeviceCategoryInput(typeInput);
         order.setDeviceBrand(request.getDeviceBrand());
         order.setDeviceModel(request.getDeviceModel());
         order.setFaultDesc(request.getFaultDesc());
@@ -112,13 +130,27 @@ public class OrderService {
         return PageResult.of(result, order -> toSimpleResponse(order));
     }
 
+    /** 历史记忆推荐：该用户历史工单的设备组合（类型+品牌+型号）去重，按最近使用排序 */
+    @Transactional(readOnly = true)
+    public List<DeviceHistoryResponse> deviceHistory(Long customerId, int limit) {
+        return orderRepository.findDeviceHistory(customerId, Math.max(1, Math.min(limit, 20))).stream()
+                .map(r -> DeviceHistoryResponse.builder()
+                        .deviceType(r.getDeviceType())
+                        .deviceBrand(r.getDeviceBrand())
+                        .deviceModel(r.getDeviceModel())
+                        .useCount(r.getUseCount())
+                        .lastUsedAt(r.getLastUsedAt() == null ? null : r.getLastUsedAt().toLocalDateTime())
+                        .build())
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public OrderDetailResponse detail(Long orderId, Long callerId, UserRole role) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BizException(ErrorCode.ORDER_NOT_FOUND));
         checkReadable(order, callerId, role);
 
-        DeviceCategory category = deviceCategoryRepository.findById(order.getDeviceCategoryId()).orElse(null);
+        DeviceCategory category = deviceCategoryRepository.findByIdOrNull(order.getDeviceCategoryId());
         OrderResponse orderResponse = toSimpleResponse(order, category);
 
         List<StatusLogResponse> logs = statusLogRepository
@@ -192,7 +224,7 @@ public class OrderService {
     }
 
     private OrderResponse toSimpleResponse(Order order) {
-        DeviceCategory category = deviceCategoryRepository.findById(order.getDeviceCategoryId()).orElse(null);
+        DeviceCategory category = deviceCategoryRepository.findByIdOrNull(order.getDeviceCategoryId());
         return toSimpleResponse(order, category);
     }
 
@@ -214,7 +246,11 @@ public class OrderService {
                 .build();
     }
 
+    /** 估算费用：自由输入且未匹配字典时无基础价，返回 null（实际金额以工程师报价为准） */
     private BigDecimal estimate(DeviceCategory category, Urgency urgency) {
+        if (category == null) {
+            return null;
+        }
         BigDecimal base = category.getBaseFee() == null ? BigDecimal.ZERO : category.getBaseFee();
         BigDecimal visit = category.getVisitFee() == null ? BigDecimal.ZERO : category.getVisitFee();
         return base.multiply(BigDecimal.valueOf(urgency.getSurchargeMultiplier()))

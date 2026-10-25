@@ -39,8 +39,13 @@ public class Order extends BaseEntity {
     @Column(name = "engineer_id")
     private Long engineerId;
 
-    @Column(name = "device_category_id", nullable = false)
+    /** 手动输入设备类型时可为空；与 deviceCategoryInput 二选一 */
+    @Column(name = "device_category_id")
     private Long deviceCategoryId;
+
+    /** 用户实际输入的设备类型文本（选中字典项时也冗余保存，历史推荐用） */
+    @Column(name = "device_category_input", length = 50)
+    private String deviceCategoryInput;
 
     @Column(name = "device_brand", length = 50)
     private String deviceBrand;

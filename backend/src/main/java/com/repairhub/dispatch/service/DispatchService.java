@@ -66,7 +66,7 @@ public class DispatchService {
     private void dispatch(Order order, double radiusMultiplier, boolean isRedispatch) {
         double radiusKm = orderProperties.getDispatchRadiusKm()
                 * urgencyMultiplier(order.getUrgency()) * radiusMultiplier;
-        DeviceCategory category = deviceCategoryRepository.findById(order.getDeviceCategoryId()).orElse(null);
+        DeviceCategory category = deviceCategoryRepository.findByIdOrNull(order.getDeviceCategoryId());
 
         Set<Long> alreadyPushed = dispatchRecordRepository
                 .findByOrderIdAndType(order.getId(), DispatchType.PUSH).stream()

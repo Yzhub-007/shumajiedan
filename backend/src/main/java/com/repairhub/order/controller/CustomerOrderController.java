@@ -8,6 +8,7 @@ import com.repairhub.common.response.ApiResponse;
 import com.repairhub.common.response.PageResult;
 import com.repairhub.dispatch.service.DispatchService;
 import com.repairhub.order.dto.CreateOrderRequest;
+import com.repairhub.order.dto.DeviceHistoryResponse;
 import com.repairhub.order.dto.EngineerLocationResponse;
 import com.repairhub.order.dto.OrderDetailResponse;
 import com.repairhub.order.dto.OrderResponse;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -66,6 +68,13 @@ public class CustomerOrderController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ApiResponse.ok(orderService.pageCustomerOrders(SecurityUtils.currentUserId(), status, page, size));
+    }
+
+    @Operation(summary = "历史设备记忆（发单页一键填充推荐）")
+    @GetMapping("/device-history")
+    public ApiResponse<List<DeviceHistoryResponse>> deviceHistory(
+            @RequestParam(defaultValue = "10") int limit) {
+        return ApiResponse.ok(orderService.deviceHistory(SecurityUtils.currentUserId(), limit));
     }
 
     @Operation(summary = "工单详情（状态流水/报价/报告/工程师信息）")

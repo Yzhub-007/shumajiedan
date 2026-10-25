@@ -20,6 +20,15 @@ import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
+    /** 历史记忆推荐的聚合投影（native SQL 列别名映射） */
+    interface DeviceHistoryProjection {
+        String getDeviceType();
+        String getDeviceBrand();
+        String getDeviceModel();
+        Long getUseCount();
+        java.sql.Timestamp getLastUsedAt();
+    }
+
     boolean existsByOrderNo(String orderNo);
 
     Page<Order> findByCustomerId(Long customerId, Pageable pageable);
@@ -70,4 +79,22 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
              WHERE o.engineerId = :engineerId AND o.status IN :statuses
             """)
     BigDecimal sumIncome(@Param("engineerId") Long engineerId, @Param("statuses") List<OrderStatus> statuses);
+
+    /** 历史记忆推荐：用户工单的设备组合（类型+品牌+型号）去重，按最近使用排序 */
+    @Query(value = """
+            SELECT COALESCE(o.device_category_input, c.name) AS deviceType,
+                   o.device_brand AS deviceBrand,
+                   o.device_model AS deviceModel,
+                   COUNT(*) AS useCount,
+                   MAX(o.created_at) AS lastUsedAt
+              FROM orders o
+              LEFT JOIN device_categories c ON c.id = o.device_category_id
+             WHERE o.customer_id = :customerId
+               AND COALESCE(o.device_category_input, c.name) IS NOT NULL
+             GROUP BY COALESCE(o.device_category_input, c.name), o.device_brand, o.device_model
+             ORDER BY MAX(o.created_at) DESC
+             LIMIT :limit
+            """, nativeQuery = true)
+    List<DeviceHistoryProjection> findDeviceHistory(@Param("customerId") Long customerId,
+                                                    @Param("limit") int limit);
 }

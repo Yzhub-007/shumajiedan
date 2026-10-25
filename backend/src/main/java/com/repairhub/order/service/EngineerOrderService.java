@@ -153,7 +153,7 @@ public class EngineerOrderService {
     }
 
     private PoolOrderResponse toPoolItem(Order order, EngineerProfile profile) {
-        DeviceCategory category = deviceCategoryRepository.findById(order.getDeviceCategoryId()).orElse(null);
+        DeviceCategory category = deviceCategoryRepository.findByIdOrNull(order.getDeviceCategoryId());
         Integer distanceM = null;
         if (profile != null && profile.getLastLng() != null && profile.getLastLat() != null
                 && (profile.getLastLng() != 0D || profile.getLastLat() != 0D)) {
@@ -164,7 +164,9 @@ public class EngineerOrderService {
         return PoolOrderResponse.builder()
                 .id(order.getId())
                 .orderNo(order.getOrderNo())
-                .deviceCategoryName(category == null ? null : category.getName())
+                .deviceCategoryName(order.getDeviceCategoryInput() != null
+                        ? order.getDeviceCategoryInput()
+                        : (category == null ? null : category.getName()))
                 .deviceBrand(order.getDeviceBrand())
                 .deviceModel(order.getDeviceModel())
                 .faultDesc(order.getFaultDesc())
@@ -178,7 +180,7 @@ public class EngineerOrderService {
     }
 
     private OrderResponse toSimpleResponse(Order order) {
-        DeviceCategory category = deviceCategoryRepository.findById(order.getDeviceCategoryId()).orElse(null);
+        DeviceCategory category = deviceCategoryRepository.findByIdOrNull(order.getDeviceCategoryId());
         String customerName = userRepository.findById(order.getCustomerId()).map(User::getNickname).orElse(null);
         return OrderResponse.from(order, category, customerName, null);
     }

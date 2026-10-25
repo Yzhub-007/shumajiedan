@@ -56,7 +56,10 @@ public class OrderResponse {
                 .engineerId(order.getEngineerId())
                 .engineerName(engineerName)
                 .deviceCategoryId(order.getDeviceCategoryId())
-                .deviceCategoryName(category == null ? null : category.getName())
+                // 优先用户输入快照（自由输入/历史工单），存量数据回落字典名
+                .deviceCategoryName(order.getDeviceCategoryInput() != null
+                        ? order.getDeviceCategoryInput()
+                        : (category == null ? null : category.getName()))
                 .deviceBrand(order.getDeviceBrand())
                 .deviceModel(order.getDeviceModel())
                 .faultDesc(order.getFaultDesc())

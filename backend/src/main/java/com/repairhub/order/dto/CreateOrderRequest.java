@@ -1,6 +1,7 @@
 package com.repairhub.order.dto;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -9,8 +10,12 @@ import java.util.List;
 @Data
 public class CreateOrderRequest {
 
-    @NotNull(message = "设备类型不能为空")
+    /** 选中字典设备类型时传；与 deviceCategoryInput 二选一 */
     private Long deviceCategoryId;
+
+    /** 手动输入的设备类型文本，与 deviceCategoryId 二选一 */
+    @Size(max = 50, message = "设备类型不能超过50个字符")
+    private String deviceCategoryInput;
 
     private String deviceBrand;
 

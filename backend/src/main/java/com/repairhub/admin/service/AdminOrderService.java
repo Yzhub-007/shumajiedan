@@ -121,7 +121,7 @@ public class AdminOrderService {
     }
 
     private OrderResponse toResponse(Order order) {
-        var category = deviceCategoryRepository.findById(order.getDeviceCategoryId()).orElse(null);
+        var category = deviceCategoryRepository.findByIdOrNull(order.getDeviceCategoryId());
         String customerName = userRepository.findById(order.getCustomerId()).map(User::getNickname).orElse(null);
         return OrderResponse.from(order, category, customerName, null);
     }
