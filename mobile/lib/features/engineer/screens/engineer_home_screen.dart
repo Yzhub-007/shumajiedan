@@ -130,65 +130,194 @@ class _EngineerHomeScreenState extends ConsumerState<EngineerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('接单大厅'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () => context.push('/notifications'),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          SwitchListTile(
-            secondary: Icon(_online ? Icons.wifi_tethering : Icons.wifi_tethering_off,
-                color: _online ? Colors.green : Colors.grey),
-            title: Text(_online ? '接单中' : '已下线'),
-            subtitle: const Text('上线后才能收到附近工单推送'),
-            value: _online,
-            onChanged: _toggling ? null : _toggleOnline,
-          ),
-          const Divider(height: 1),
-          ListTile(
-            title: const Text('可抢工单'),
-            trailing: IconButton(onPressed: _loadPool, icon: const Icon(Icons.refresh)),
-          ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _loadPool,
-              child: _loadingPool
-                  ? const Center(child: CircularProgressIndicator())
-                  : _pool.isEmpty
-                      ? ListView(children: const [
-                          SizedBox(height: 140),
-                          EmptyView(icon: Icons.handyman_outlined, text: '附近暂无可抢工单'),
-                        ])
-                      : ListView.separated(
-                          itemCount: _pool.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final order = _pool[index] as Map<String, dynamic>;
-                            final distance = order['distanceM'];
-                            return ListTile(
-                              title: Text(
-                                  '${order['deviceCategoryName'] ?? ""} · ${order['faultDesc'] ?? ""}',
-                                  maxLines: 1, overflow: TextOverflow.ellipsis),
-                              subtitle: Text(
-                                  '${distance == null ? "距离未知" : "${(distance as num).toStringAsFixed(0)}m"}'
-                                  '${order['urgencyLabel'] == null ? "" : " · ${order['urgencyLabel']}"}'),
-                              trailing: FilledButton(
-                                onPressed: _online ? () => _grab(order) : null,
-                                child: const Text('抢单'),
-                              ),
-                              onTap: () => context.push('/engineer/orders/${order['id']}'),
-                            );
-                          },
-                        ),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            LargeTitleHeader(
+              title: '接单大厅',
+              subtitle: '附近工单实时推送',
+              actions: IconButton(
+                icon: const Icon(Icons.notifications_outlined, size: 26),
+                onPressed: () => context.push('/notifications'),
+              ),
             ),
-          ),
-        ],
+            // 接单状态卡：iOS 开关 + 状态点
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainer,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: _online ? const Color(0xFF34C759) : scheme.outline,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_online ? '接单中' : '已下线',
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 2),
+                        Text(
+                            _toggling ? '正在更新状态…' : '上线后才能收到附近工单推送',
+                            style: TextStyle(
+                                fontSize: 12, color: scheme.onSurfaceVariant)),
+                      ],
+                    ),
+                  ),
+                  if (_toggling)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 12),
+                      child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2)),
+                    )
+                  else
+                    Switch(
+                      value: _online,
+                      onChanged: _toggleOnline,
+                    ),
+                ],
+              ),
+            ),
+            // 工单池标题行
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 8, 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text('可抢工单',
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface)),
+                  ),
+                  IconButton(
+                      onPressed: _loadPool,
+                      icon: const Icon(Icons.refresh, size: 20)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _loadPool,
+                child: _loadingPool
+                    ? const Center(child: CircularProgressIndicator())
+                    : _pool.isEmpty
+                        ? ListView(children: const [
+                            SizedBox(height: 140),
+                            EmptyView(
+                                icon: Icons.handyman_outlined,
+                                text: '附近暂无可抢工单'),
+                          ])
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                            itemCount: _pool.length,
+                            itemBuilder: (context, index) {
+                              final order = _pool[index] as Map<String, dynamic>;
+                              final distance = order['distanceM'];
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: scheme.surfaceContainer,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                              '${order['deviceCategoryName'] ?? "设备维修"}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight:
+                                                      FontWeight.w600)),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                              order['faultDesc']?.toString() ?? '',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: scheme
+                                                      .onSurfaceVariant)),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets
+                                                    .symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: scheme
+                                                      .onSurfaceVariant
+                                                      .withAlpha(16),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          999),
+                                                ),
+                                                child: Text(
+                                                    '${distance == null ? "距离未知" : "${(distance as num).toStringAsFixed(0)}m"}'
+                                                    '${order['urgencyLabel'] == null ? "" : " · ${order['urgencyLabel']}"}',
+                                                    style: TextStyle(
+                                                        fontSize: 11,
+                                                        color: scheme
+                                                            .onSurfaceVariant)),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    SizedBox(
+                                      height: 36,
+                                      child: FilledButton(
+                                        style: FilledButton.styleFrom(
+                                          padding: const EdgeInsets
+                                              .symmetric(horizontal: 18),
+                                          textStyle: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                        onPressed: _online
+                                            ? () => _grab(order)
+                                            : null,
+                                        child: const Text('抢单'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -66,6 +66,7 @@ class _CustomerOrderListScreenState extends ConsumerState<CustomerOrderListScree
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('我的工单')),
       body: Column(
@@ -74,7 +75,7 @@ class _CustomerOrderListScreenState extends ConsumerState<CustomerOrderListScree
             height: 48,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               children: _filters.entries
                   .map((entry) => Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -100,23 +101,48 @@ class _CustomerOrderListScreenState extends ConsumerState<CustomerOrderListScree
                           SizedBox(height: 160),
                           EmptyView(text: '暂无工单'),
                         ])
-                      : ListView.separated(
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                           itemCount: _orders.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
                           itemBuilder: (context, index) {
                             final order = _orders[index];
-                            return ListTile(
-                              title: Text(
-                                  '${order.deviceCategoryName ?? "设备维修"} · ${order.faultDesc}',
-                                  maxLines: 1, overflow: TextOverflow.ellipsis),
-                              subtitle: Text(
-                                  '${order.statusLabel}${order.addressText == null ? "" : " · ${order.addressText}"}',
-                                  maxLines: 1, overflow: TextOverflow.ellipsis),
-                              trailing: StatusTag(
-                                  text: order.statusLabel,
-                                  color: StatusTag.colorOfKind(
-                                      order.statusKind.name, context)),
-                              onTap: () => context.push('/customer/orders/${order.id}'),
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              decoration: BoxDecoration(
+                                color: scheme.surfaceContainer,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                title: Text(
+                                    '${order.deviceCategoryName ?? "设备维修"} · ${order.faultDesc}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600)),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                      '${order.addressText == null ? order.statusLabel : order.addressText}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis),
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    StatusTag(
+                                        text: order.statusLabel,
+                                        color: StatusTag.colorOfKind(
+                                            order.statusKind.name, context)),
+                                    Icon(Icons.chevron_right,
+                                        size: 16, color: scheme.outline),
+                                  ],
+                                ),
+                                onTap: () =>
+                                    context.push('/customer/orders/${order.id}'),
+                              ),
                             );
                           },
                         ),

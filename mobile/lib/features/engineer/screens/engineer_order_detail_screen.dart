@@ -210,14 +210,45 @@ class _EngineerOrderDetailScreenState extends ConsumerState<EngineerOrderDetailS
       appBar: AppBar(title: Text(order?['statusLabel']?.toString() ?? '工单详情')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
+            : ListView(
               padding: const EdgeInsets.symmetric(vertical: 12),
               children: [
                 SectionCard(
                   title: '工单信息',
-                  child: Text(
-                      '${order?['deviceCategoryName'] ?? ""} ${order?['deviceBrand'] ?? ""} ${order?['deviceModel'] ?? ""}\n'
-                      '故障：${order?['faultDesc'] ?? ""}\n地址：$address'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                          '${order?['deviceCategoryName'] ?? "设备维修"}'
+                          '${order?['deviceBrand']?.toString().isNotEmpty == true ? " · ${order?['deviceBrand']}" : ""}'
+                          '${order?['deviceModel']?.toString().isNotEmpty == true ? " ${order?['deviceModel']}" : ""}',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 8),
+                      Text('故障：${order?['faultDesc'] ?? "-"}',
+                          style: TextStyle(
+                              fontSize: 14,
+                              height: 1.5,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant)),
+                      const SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.location_on_outlined,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(address.isEmpty ? '-' : address,
+                                style: const TextStyle(
+                                    fontSize: 14, height: 1.4)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
                 if (status == 'ACCEPTED') ...[
                   const SizedBox(height: 8),

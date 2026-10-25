@@ -109,26 +109,41 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               children: [
                 SectionCard(
                   title: '故障信息',
-                  child: Text(
-                      '${order?['deviceCategoryName'] ?? ""} ${order?['deviceBrand'] ?? ""}\n'
-                      '${order?['faultDesc'] ?? ""}'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                          '${order?['deviceCategoryName'] ?? "设备维修"}'
+                          '${order?['deviceBrand']?.toString().isNotEmpty == true ? " · ${order?['deviceBrand']}" : ""}',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 8),
+                      Text(order?['faultDesc']?.toString() ?? '-',
+                          style: TextStyle(
+                              fontSize: 15,
+                              height: 1.5,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant)),
+                    ],
+                  ),
                 ),
                 if ((order?['mediaUrls'] as List<dynamic>? ?? []).isNotEmpty)
                   SectionCard(
                     title: '故障照片',
                     child: SizedBox(
-                      height: 90,
+                      height: 92,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: (order?['mediaUrls'] as List).length,
                         separatorBuilder: (_, __) => const SizedBox(width: 8),
                         itemBuilder: (context, index) => ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                           child: Image.network(
                               (order!['mediaUrls'] as List)[index].toString(),
-                              width: 90, height: 90, fit: BoxFit.cover,
+                              width: 92, height: 92, fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) =>
-                                  const SizedBox(width: 90, height: 90)),
+                                  const SizedBox(width: 92, height: 92)),
                         ),
                       ),
                     ),
@@ -141,9 +156,47 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                       icon: const Icon(Icons.phone_outlined, size: 18),
                       label: const Text('联系'),
                     ),
-                    child: Text(
-                        '${engineer['realName'] ?? engineer['phone'] ?? ""}\n'
-                        '评分 ${engineer['ratingAvg'] ?? "-"} · 完成 ${engineer['orderCount'] ?? 0} 单'),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withAlpha(20),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.engineering,
+                              size: 22,
+                              color: Theme.of(context).colorScheme.primary),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                  engineer['realName']?.toString() ??
+                                      engineer['phone']?.toString() ??
+                                      '',
+                                  style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 3),
+                              Text(
+                                  '评分 ${engineer['ratingAvg'] ?? "-"} · 完成 ${engineer['orderCount'] ?? 0} 单',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                     // TODO(3.2.5) 前往中实时地图（engineer-location 轮询渲染到高德地图）
                   ),
                 if (report != null)
@@ -152,9 +205,8 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('诊断：${report['diagnosis'] ?? "-"}'),
-                        const SizedBox(height: 4),
-                        Text('方案：${report['solution'] ?? "-"}'),
+                        InfoRow(label: '诊断', value: report['diagnosis']?.toString() ?? '-'),
+                        InfoRow(label: '方案', value: report['solution']?.toString() ?? '-'),
                         const SizedBox(height: 8),
                         _photoGrid('维修后照片', report['afterPhotos']),
                       ],
@@ -164,15 +216,57 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   title: '进度',
                   child: Column(
                     children: logs
-                        .map((log) => ListTile(
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.check_circle_outline, size: 20),
-                              title: Text(
-                                  '${log['fromStatusLabel'] ?? ""} → ${log['toStatusLabel'] ?? ""}'),
-                              subtitle: Text(log['remark']?.toString() ?? ''),
-                              trailing: Text(log['createdAt']?.toString() ?? '',
-                                  style: const TextStyle(fontSize: 11)),
+                        .map((log) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 4),
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                            '${log['fromStatusLabel'] ?? ""}${log['fromStatusLabel'] == null ? "" : " → "}${log['toStatusLabel'] ?? ""}',
+                                            style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600)),
+                                        if ((log['remark']?.toString() ?? '')
+                                            .isNotEmpty)
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 2),
+                                            child: Text(
+                                                log['remark'].toString(),
+                                                style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurfaceVariant)),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(log['createdAt']?.toString() ?? '',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .outline)),
+                                ],
+                              ),
                             ))
                         .toList(),
                   ),
@@ -187,20 +281,21 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   Widget _photoGrid(String title, dynamic photos) {
     final list = (photos as List<dynamic>? ?? []).map((e) => e.toString()).toList();
     if (list.isEmpty) return const SizedBox.shrink();
+    final secondary = Theme.of(context).colorScheme.onSurfaceVariant;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: Theme.of(context).textTheme.bodySmall),
+        Text(title, style: TextStyle(fontSize: 12, color: secondary)),
         const SizedBox(height: 6),
         SizedBox(
-          height: 90,
+          height: 92,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: list.length,
             separatorBuilder: (_, __) => const SizedBox(width: 8),
             itemBuilder: (context, index) => ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(list[index], width: 90, height: 90, fit: BoxFit.cover),
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(list[index], width: 92, height: 92, fit: BoxFit.cover),
             ),
           ),
         ),
@@ -228,9 +323,30 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         return SectionCard(
           title: '维修报价（工时+配件）',
           child: Column(children: [
-            Text('合计 ¥${pendingQuote['total']}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text('¥',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.primary)),
+                const SizedBox(width: 2),
+                Text('${pendingQuote['total']}',
+                    style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                        color: Theme.of(context).colorScheme.primary)),
+                const SizedBox(width: 8),
+                Text('工时 ¥${pendingQuote['laborFee'] ?? 0} · 配件 ¥${pendingQuote['partsFee'] ?? 0}',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              ],
+            ),
+            const SizedBox(height: 12),
             Row(children: [
               Expanded(child: OutlinedButton(
                   onPressed: _acting ? null : () =>

@@ -15,6 +15,8 @@ class RepairHubApp extends ConsumerWidget {
       title: '机器报修',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.system,
       routerConfig: router,
       builder: (context, child) => Stack(
         children: [
@@ -37,14 +39,18 @@ class AppErrorBanner extends StatelessWidget {
       builder: (context, errors, _) {
         if (errors.isEmpty) return const SizedBox.shrink();
         return Positioned(
-          left: 0,
-          right: 0,
-          top: MediaQuery.of(context).padding.top,
+          left: 12,
+          right: 12,
+          top: MediaQuery.of(context).padding.top + 8,
           child: Material(
-            color: Colors.red.shade700,
+            color: const Color(0xFFFF3B30),
+            borderRadius: BorderRadius.circular(12),
+            elevation: 6,
+            shadowColor: Colors.black26,
             child: SafeArea(
               bottom: false,
               child: InkWell(
+                borderRadius: BorderRadius.circular(12),
                 onTap: () => showModalBottomSheet<void>(
                   context: context,
                   builder: (_) => ListView(
@@ -69,7 +75,7 @@ class AppErrorBanner extends StatelessWidget {
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   child: Text(
                     '⚠ ${errors.first}',
                     maxLines: 3,

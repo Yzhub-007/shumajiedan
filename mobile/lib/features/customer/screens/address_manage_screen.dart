@@ -69,6 +69,7 @@ class _AddressManageScreenState extends ConsumerState<AddressManageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('地址管理')),
       floatingActionButton: FloatingActionButton.extended(
@@ -85,55 +86,108 @@ class _AddressManageScreenState extends ConsumerState<AddressManageScreen> {
                     SizedBox(height: 160),
                     EmptyView(icon: Icons.location_off_outlined, text: '还没有常用地址'),
                   ])
-                : ListView.separated(
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
                     itemCount: _addresses.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final a = _addresses[index];
                       final isDefault = a['isDefault'] == true;
-                      return ListTile(
-                        leading: Icon(
-                          isDefault ? Icons.home_outlined : Icons.location_on_outlined,
-                          color: isDefault ? Theme.of(context).colorScheme.primary : null,
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainer,
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        title: Text('${a['label'] ?? "地址"}${isDefault ? "（默认）" : ""}'),
-                        subtitle: Text(
-                          '${a["province"] ?? ""}${a["city"] ?? ""}${a["district"] ?? ""} ${a["detail"] ?? ""}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (action) async {
-                            if (action == 'edit') {
-                              _openEditor(a);
-                            } else if (action == 'default') {
-                              try {
-                                await ref.read(apiClientProvider).put(
-                                      '/api/customer/addresses/${a['id']}',
-                                      data: {
-                                        'label': a['label'],
-                                        'province': a['province'],
-                                        'city': a['city'],
-                                        'district': a['district'],
-                                        'detail': a['detail'],
-                                        'lng': a['lng'],
-                                        'lat': a['lat'],
-                                        'isDefault': true,
-                                      },
-                                    );
-                                _load();
-                              } catch (e) {
-                                _toast(e.toString());
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 6),
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: isDefault
+                                  ? scheme.primary.withAlpha(22)
+                                  : scheme.onSurfaceVariant.withAlpha(14),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isDefault
+                                  ? Icons.home_outlined
+                                  : Icons.location_on_outlined,
+                              size: 20,
+                              color: isDefault
+                                  ? scheme.primary
+                                  : scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          title: Row(
+                            children: [
+                              Flexible(
+                                child: Text('${a['label'] ?? "地址"}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis),
+                              ),
+                              if (isDefault) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: scheme.primary.withAlpha(22),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text('默认',
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: scheme.primary)),
+                                ),
+                              ],
+                            ],
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 3),
+                            child: Text(
+                              '${a["province"] ?? ""}${a["city"] ?? ""}${a["district"] ?? ""} ${a["detail"] ?? ""}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            icon: Icon(Icons.more_horiz,
+                                color: scheme.onSurfaceVariant),
+                            onSelected: (action) async {
+                              if (action == 'edit') {
+                                _openEditor(a);
+                              } else if (action == 'default') {
+                                try {
+                                  await ref.read(apiClientProvider).put(
+                                        '/api/customer/addresses/${a['id']}',
+                                        data: {
+                                          'label': a['label'],
+                                          'province': a['province'],
+                                          'city': a['city'],
+                                          'district': a['district'],
+                                          'detail': a['detail'],
+                                          'lng': a['lng'],
+                                          'lat': a['lat'],
+                                          'isDefault': true,
+                                        },
+                                      );
+                                  _load();
+                                } catch (e) {
+                                  _toast(e.toString());
+                                }
+                              } else if (action == 'delete') {
+                                _delete(a);
                               }
-                            } else if (action == 'delete') {
-                              _delete(a);
-                            }
-                          },
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(value: 'edit', child: Text('编辑')),
-                            PopupMenuItem(value: 'default', child: Text('设为默认')),
-                            PopupMenuItem(value: 'delete', child: Text('删除')),
-                          ],
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(value: 'edit', child: Text('编辑')),
+                              PopupMenuItem(value: 'default', child: Text('设为默认')),
+                              PopupMenuItem(value: 'delete', child: Text('删除')),
+                            ],
+                          ),
                         ),
                       );
                     },

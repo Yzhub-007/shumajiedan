@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/common_widgets.dart';
 import '../../auth/controllers/auth_controller.dart';
 
@@ -41,71 +42,179 @@ class _EngineerProfileScreenState extends ConsumerState<EngineerProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final status = _profile?['verifyStatus']?.toString() ?? 'PENDING';
+    final statusLabel = switch (status) {
+      'APPROVED' => '已认证',
+      'REJECTED' => '认证未通过',
+      _ => '审核中',
+    };
+    final statusColor = switch (status) {
+      'APPROVED' => const Color(0xFF34C759),
+      'REJECTED' => const Color(0xFFFF3B30),
+      _ => const Color(0xFFFF9500),
+    };
     return Scaffold(
       appBar: AppBar(title: const Text('我的')),
       body: ListView(
+        padding: const EdgeInsets.only(top: 4, bottom: 32),
         children: [
-          ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.engineering)),
-            title: Text(_profile?['realName']?.toString() ?? '未认证工程师'),
-            subtitle: Text(switch (status) {
-              'APPROVED' => '已认证',
-              'REJECTED' => '认证未通过',
-              _ => '审核中',
-            }),
-          ),
-          const Divider(),
-          SectionCard(
-            title: '接单统计',
+          // 资料卡
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _stat('累计接单', '${_stats?['totalOrders'] ?? 0}'),
-                _stat('已完成', '${_stats?['completedOrders'] ?? 0}'),
-                _stat('评分', '${_stats?['ratingAvg'] ?? "-"}'),
-                _stat('累计收入', '¥${_stats?['totalIncome'] ?? 0}'),
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF1E5AA8), Color(0xFF3E7BC8)],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(Icons.engineering, color: Colors.white, size: 26),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_profile?['realName']?.toString() ?? '未认证工程师',
+                          style: const TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.w700),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: statusColor.withAlpha(26),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(statusLabel,
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: statusColor)),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, size: 20, color: scheme.outline),
               ],
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.badge_outlined),
-            title: const Text('资质认证'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/engineer/verify'),
+          const SizedBox(height: 8),
+          // 接单统计
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                _stat(context, '累计接单', '${_stats?['totalOrders'] ?? 0}'),
+                _divider(scheme),
+                _stat(context, '已完成', '${_stats?['completedOrders'] ?? 0}'),
+                _divider(scheme),
+                _stat(context, '评分', '${_stats?['ratingAvg'] ?? "-"}'),
+                _divider(scheme),
+                _stat(context, '累计收入', '¥${_stats?['totalIncome'] ?? 0}'),
+              ],
+            ),
           ),
-          ListTile(
-            leading: const Icon(Icons.account_balance_wallet_outlined),
-            title: const Text('我的钱包 / 提现'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/engineer/wallet'),
+          const SizedBox(height: 8),
+          GroupCard(
+            separatorIndent: 60,
+            children: [
+              ListTile(
+                leading: const TintedIconBox(icon: Icons.badge_outlined, size: 28),
+                title: const Text('资质认证'),
+                trailing:
+                    Icon(Icons.chevron_right, size: 18, color: scheme.outline),
+                onTap: () => context.push('/engineer/verify'),
+              ),
+              ListTile(
+                leading: TintedIconBox(
+                    icon: Icons.account_balance_wallet_outlined,
+                    color: AppTheme.systemGreen,
+                    size: 28),
+                title: const Text('我的钱包 / 提现'),
+                trailing:
+                    Icon(Icons.chevron_right, size: 18, color: scheme.outline),
+                onTap: () => context.push('/engineer/wallet'),
+              ),
+              ListTile(
+                leading: TintedIconBox(
+                    icon: Icons.notifications_outlined,
+                    color: AppTheme.systemOrange,
+                    size: 28),
+                title: const Text('消息中心'),
+                trailing:
+                    Icon(Icons.chevron_right, size: 18, color: scheme.outline),
+                onTap: () => context.push('/notifications'),
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.notifications_outlined),
-            title: const Text('消息中心'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/notifications'),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('退出登录'),
-            onTap: () async {
-              await ref.read(authControllerProvider.notifier).logout();
-            },
+          const SizedBox(height: 16),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: scheme.error,
+                  textStyle:
+                      const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                onPressed: () async {
+                  await ref.read(authControllerProvider.notifier).logout();
+                },
+                child: const Text('退出登录'),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _stat(String label, String value) {
-    return Column(
-      children: [
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-      ],
+  Widget _divider(ColorScheme scheme) {
+    return Container(width: 0.5, height: 28, color: scheme.outlineVariant);
+  }
+
+  Widget _stat(BuildContext context, String label, String value) {
+    final scheme = Theme.of(context).colorScheme;
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 17, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(label,
+              style:
+                  TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+        ],
+      ),
     );
   }
 }

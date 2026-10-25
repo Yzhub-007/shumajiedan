@@ -38,6 +38,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('消息中心'),
@@ -64,40 +65,77 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     SizedBox(height: 160),
                     EmptyView(text: '暂无消息'),
                   ])
-                : ListView.separated(
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                     itemCount: _items.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final item = _items[index] as Map<String, dynamic>;
-                      return ListTile(
-                        leading: const Icon(Icons.notifications_outlined),
-                        title: Text(item['title']?.toString() ?? ''),
-                        subtitle: Text(item['body']?.toString() ?? '',
-                            maxLines: 2, overflow: TextOverflow.ellipsis),
-                        trailing: (item['read'] == true)
-                            ? null
-                            : Container(width: 8, height: 8,
-                                decoration: const BoxDecoration(
-                                    color: Colors.red, shape: BoxShape.circle)),
-                        onTap: () async {
-                          // 计划书 3.2.7：标记已读并按身份跳转对应工单
-                          final data = item['data'] as Map<String, dynamic>?;
-                          final orderId = data?['orderId'];
-                          try {
-                            await ref
-                                .read(apiClientProvider)
-                                .post('/api/notifications/${item['id']}/read');
-                          } catch (_) {}
-                          if (!context.mounted) return;
-                          if (orderId is int) {
-                            final isEngineer = TokenStorage.role == 'ENGINEER';
-                            context.push(isEngineer
-                                ? '/engineer/orders/$orderId'
-                                : '/customer/orders/$orderId');
-                          } else {
-                            _load();
-                          }
-                        },
+                      final unread = item['read'] != true;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainer,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 6),
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: unread
+                                  ? scheme.primary.withAlpha(22)
+                                  : scheme.onSurfaceVariant.withAlpha(14),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.notifications_outlined,
+                              size: 20,
+                              color: unread
+                                  ? scheme.primary
+                                  : scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          title: Text(item['title']?.toString() ?? '',
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: unread
+                                      ? FontWeight.w600
+                                      : FontWeight.w400)),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 3),
+                            child: Text(item['body']?.toString() ?? '',
+                                maxLines: 2, overflow: TextOverflow.ellipsis),
+                          ),
+                          trailing: unread
+                              ? Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                      color: scheme.primary,
+                                      shape: BoxShape.circle)),
+                              : null,
+                          onTap: () async {
+                            // 计划书 3.2.7：标记已读并按身份跳转对应工单
+                            final data = item['data'] as Map<String, dynamic>?;
+                            final orderId = data?['orderId'];
+                            try {
+                              await ref
+                                  .read(apiClientProvider)
+                                  .post('/api/notifications/${item['id']}/read');
+                            } catch (_) {}
+                            if (!context.mounted) return;
+                            if (orderId is int) {
+                              final isEngineer = TokenStorage.role == 'ENGINEER';
+                              context.push(isEngineer
+                                  ? '/engineer/orders/$orderId'
+                                  : '/customer/orders/$orderId');
+                            } else {
+                              _load();
+                            }
+                          },
+                        ),
                       );
                     },
                   ),

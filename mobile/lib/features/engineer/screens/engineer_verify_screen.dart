@@ -131,114 +131,167 @@ class _EngineerVerifyScreenState extends ConsumerState<EngineerVerifyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('资质认证')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
         children: [
           if (_currentStatus != null) ...[
-            _statusBanner(),
-            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: _statusBanner(),
+            ),
+            const SizedBox(height: 10),
           ],
-          TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: '真实姓名')),
-          const SizedBox(height: 12),
-          TextField(
-              controller: _idCardController,
-              maxLength: 18,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: '身份证号', counterText: '')),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: InkWell(
-                onTap: () => _pickIdPhoto(front: true),
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  height: 90,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).colorScheme.outline),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: _frontUrl == null
-                      ? const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.badge_outlined),
-                            SizedBox(height: 4),
-                            Text('身份证正面', style: TextStyle(fontSize: 12)),
-                          ],
-                        )
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.network(_frontUrl!, fit: BoxFit.cover, width: double.infinity)),
-                ),
-              ),
+          SectionCard(
+            title: '基本信息',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(labelText: '真实姓名')),
+                const SizedBox(height: 12),
+                TextField(
+                    controller: _idCardController,
+                    maxLength: 18,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                        labelText: '身份证号', counterText: '')),
+                const SizedBox(height: 12),
+                TextField(
+                    controller: _skillsController,
+                    decoration: const InputDecoration(
+                        labelText: '擅长设备类型（逗号分隔，如：注塑机,制冷设备）')),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: InkWell(
-                onTap: () => _pickIdPhoto(front: false),
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  height: 90,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).colorScheme.outline),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: _backUrl == null
-                      ? const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.badge),
-                            SizedBox(height: 4),
-                            Text('身份证反面', style: TextStyle(fontSize: 12)),
-                          ],
-                        )
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.network(_backUrl!, fit: BoxFit.cover, width: double.infinity)),
-                ),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 12),
-          TextField(
-              controller: _skillsController,
-              decoration: const InputDecoration(
-                  labelText: '擅长设备类型（逗号分隔，如：注塑机,制冷设备）')),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _pickCerts,
-            icon: const Icon(Icons.workspace_premium_outlined),
-            label: Text('技能证书上传（${_certUrls.length}）'),
           ),
-          if (_certUrls.isNotEmpty)
-            SizedBox(
-              height: 72,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _certUrls.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 6),
-                itemBuilder: (context, index) => ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: Image.network(_certUrls[index], width: 72, height: 72, fit: BoxFit.cover),
+          SectionCard(
+            title: '资质材料',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _pickIdPhoto(front: true),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 96,
+                        decoration: BoxDecoration(
+                          color: scheme.onSurfaceVariant.withAlpha(12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: scheme.outlineVariant),
+                        ),
+                        child: _frontUrl == null
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.badge_outlined,
+                                      size: 22, color: scheme.onSurfaceVariant),
+                                  const SizedBox(height: 4),
+                                  Text('身份证正面',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: scheme.onSurfaceVariant)),
+                                ],
+                              )
+                            : ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(_frontUrl!,
+                                    fit: BoxFit.cover, width: double.infinity)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _pickIdPhoto(front: false),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 96,
+                        decoration: BoxDecoration(
+                          color: scheme.onSurfaceVariant.withAlpha(12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: scheme.outlineVariant),
+                        ),
+                        child: _backUrl == null
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.badge,
+                                      size: 22, color: scheme.onSurfaceVariant),
+                                  const SizedBox(height: 4),
+                                  Text('身份证反面',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: scheme.onSurfaceVariant)),
+                                ],
+                              )
+                            : ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(_backUrl!,
+                                    fit: BoxFit.cover, width: double.infinity)),
+                      ),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _pickCerts,
+                    icon: const Icon(Icons.workspace_premium_outlined, size: 20),
+                    label: Text('技能证书上传（${_certUrls.length}）'),
+                  ),
                 ),
-              ),
+                if (_certUrls.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: SizedBox(
+                      height: 76,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _certUrls.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) => ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(_certUrls[index],
+                              width: 76, height: 76, fit: BoxFit.cover),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          const SizedBox(height: 16),
-          Text('服务半径：${_radiusKm.round()} 公里'),
-          Slider(
-            value: _radiusKm,
-            min: 1,
-            max: 50,
-            divisions: 49,
-            label: '${_radiusKm.round()}km',
-            onChanged: (v) => setState(() => _radiusKm = v),
           ),
-          const SizedBox(height: 24),
-          PrimaryButton(label: '提交认证', onPressed: _submit, loading: _submitting),
+          SectionCard(
+            title: '服务范围',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('接单半径：${_radiusKm.round()} 公里',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface)),
+                Slider(
+                  value: _radiusKm,
+                  min: 1,
+                  max: 50,
+                  divisions: 49,
+                  label: '${_radiusKm.round()}km',
+                  onChanged: (v) => setState(() => _radiusKm = v),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: PrimaryButton(
+                label: '提交认证', onPressed: _submit, loading: _submitting),
+          ),
         ],
       ),
     );
@@ -252,18 +305,21 @@ class _EngineerVerifyScreenState extends ConsumerState<EngineerVerifyScreen> {
       _ => '',
     };
     final color = switch (_currentStatus) {
-      'APPROVED' => Colors.green,
-      'REJECTED' => Colors.red,
-      _ => Colors.orange,
+      'APPROVED' => const Color(0xFF34C759),
+      'REJECTED' => const Color(0xFFFF3B30),
+      _ => const Color(0xFFFF9500),
     };
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-          color: color.withAlpha(24), borderRadius: BorderRadius.circular(10)),
+          color: color.withAlpha(24), borderRadius: BorderRadius.circular(14)),
       child: Row(children: [
-        Icon(Icons.info_outline, color: color),
-        const SizedBox(width: 8),
-        Expanded(child: Text(text)),
+        Icon(Icons.info_outline, color: color, size: 20),
+        const SizedBox(width: 10),
+        Expanded(
+            child: Text(text,
+                style: TextStyle(
+                    fontSize: 13, height: 1.4, color: Theme.of(context).colorScheme.onSurface))),
       ]),
     );
   }

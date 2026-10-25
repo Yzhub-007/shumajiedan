@@ -139,128 +139,201 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('发布维修工单')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
         children: [
-          DropdownButtonFormField<int>(
-            value: _categoryId,
-            decoration: const InputDecoration(labelText: '设备类型'),
-            items: _categories
-                .map((c) => DropdownMenuItem<int>(
-                      value: c['id'] as int,
-                      child: Text(c['name']?.toString() ?? ''),
-                    ))
-                .toList(),
-            onChanged: (value) => setState(() => _categoryId = value),
+          SectionCard(
+            title: '设备信息',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<int>(
+                  value: _categoryId,
+                  decoration: const InputDecoration(labelText: '设备类型'),
+                  items: _categories
+                      .map((c) => DropdownMenuItem<int>(
+                            value: c['id'] as int,
+                            child: Text(c['name']?.toString() ?? ''),
+                          ))
+                      .toList(),
+                  onChanged: (value) => setState(() => _categoryId = value),
+                ),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: TextField(
+                      controller: _brandController,
+                      decoration:
+                          const InputDecoration(labelText: '品牌（选填）'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(
+                      controller: _modelController,
+                      decoration:
+                          const InputDecoration(labelText: '型号（选填）'))),
+                ]),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _descController,
+                  maxLines: 4,
+                  maxLength: 2000,
+                  decoration: const InputDecoration(
+                      labelText: '故障描述', alignLabelWithHint: true),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Row(children: [
-            Expanded(child: TextField(
-                controller: _brandController,
-                decoration: const InputDecoration(labelText: '品牌（选填）'))),
-            const SizedBox(width: 12),
-            Expanded(child: TextField(
-                controller: _modelController,
-                decoration: const InputDecoration(labelText: '型号（选填）'))),
-          ]),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _descController,
-            maxLines: 4,
-            maxLength: 2000,
-            decoration: const InputDecoration(
-                labelText: '故障描述', alignLabelWithHint: true),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              OutlinedButton.icon(
-                onPressed: _uploading ? null : _pickAndUpload,
-                icon: const Icon(Icons.camera_alt_outlined),
-                label: Text(_uploading ? '上传中...' : '添加故障照片（${_mediaUrls.length}）'),
-              ),
-              // TODO(1.3.2) 视频拍摄上传与压缩
-            ],
-          ),
-          if (_mediaUrls.isNotEmpty)
-            SizedBox(
-              height: 84,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _mediaUrls.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) => Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(_mediaUrls[index],
-                          width: 84, height: 84, fit: BoxFit.cover),
-                    ),
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: InkWell(
-                        onTap: () => setState(() => _mediaUrls.removeAt(index)),
-                        child: const Icon(Icons.cancel, size: 20),
+          SectionCard(
+            title: '故障照片',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_mediaUrls.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: SizedBox(
+                      height: 84,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _mediaUrls.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) => Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(_mediaUrls[index],
+                                  width: 84, height: 84, fit: BoxFit.cover),
+                            ),
+                            Positioned(
+                              right: -6,
+                              top: -6,
+                              child: InkWell(
+                                onTap: () =>
+                                    setState(() => _mediaUrls.removeAt(index)),
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: scheme.surfaceContainer,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.cancel,
+                                      size: 18, color: scheme.onSurfaceVariant),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                    ),
+                  ),
+                GestureDetector(
+                  onTap: _uploading ? null : _pickAndUpload,
+                  child: Container(
+                    height: 84,
+                    width: 84,
+                    decoration: BoxDecoration(
+                      color: scheme.onSurfaceVariant.withAlpha(12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: scheme.outlineVariant, style: BorderStyle.solid),
+                    ),
+                    child: _uploading
+                        ? const Padding(
+                            padding: EdgeInsets.all(24),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.camera_alt_outlined,
+                                  size: 22, color: scheme.onSurfaceVariant),
+                              const SizedBox(height: 4),
+                              Text('添加照片',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: scheme.onSurfaceVariant)),
+                            ],
+                          ),
+                  ),
+                ),
+                // TODO(1.3.2) 视频拍摄上传与压缩
+              ],
+            ),
+          ),
+          SectionCard(
+            title: '服务安排',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<int>(
+                        value: _addressId,
+                        decoration: const InputDecoration(labelText: '服务地址'),
+                        items: _addresses
+                            .map((a) => DropdownMenuItem<int>(
+                                  value: a['id'] as int,
+                                  child: Text(
+                                    '${a["label"] ?? "地址"} · ${a["detail"] ?? ""}',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: (value) => setState(() => _addressId = value),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        await context.push('/customer/addresses');
+                        _loadAddresses();
+                      },
+                      child: const Text('管理'),
                     ),
                   ],
                 ),
-              ),
-            ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<int>(
-                  value: _addressId,
-                  decoration: const InputDecoration(labelText: '服务地址'),
-                  items: _addresses
-                      .map((a) => DropdownMenuItem<int>(
-                            value: a['id'] as int,
-                            child: Text(
-                              '${a["label"] ?? "地址"} · ${a["detail"] ?? ""}',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ))
-                      .toList(),
-                  onChanged: (value) => setState(() => _addressId = value),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: _pickExpectTime,
+                  child: InputDecorator(
+                    decoration:
+                        const InputDecoration(labelText: '期望上门时间（选填）'),
+                    child: Text(_expectTime == null
+                        ? '尽快上门'
+                        : '${_expectTime!.month}月${_expectTime!.day}日 '
+                            '${_expectTime!.hour.toString().padLeft(2, "0")}:${_expectTime!.minute.toString().padLeft(2, "0")}'),
+                  ),
                 ),
-              ),
-              TextButton(
-                onPressed: () async {
-                  await context.push('/customer/addresses');
-                  _loadAddresses();
-                },
-                child: const Text('管理'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          InkWell(
-            onTap: _pickExpectTime,
-            child: InputDecorator(
-              decoration: const InputDecoration(labelText: '期望上门时间（选填）'),
-              child: Text(_expectTime == null
-                  ? '尽快上门'
-                  : '${_expectTime!.month}月${_expectTime!.day}日 '
-                      '${_expectTime!.hour.toString().padLeft(2, "0")}:${_expectTime!.minute.toString().padLeft(2, "0")}'),
+                const SizedBox(height: 16),
+                Text('紧急程度',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'NORMAL', label: Text('普通')),
+                      ButtonSegment(value: 'URGENT', label: Text('紧急')),
+                      ButtonSegment(value: 'CRITICAL', label: Text('特急')),
+                    ],
+                    selected: {_urgency},
+                    onSelectionChanged: (s) =>
+                        setState(() => _urgency = s.first),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'NORMAL', label: Text('普通')),
-              ButtonSegment(value: 'URGENT', label: Text('紧急')),
-              ButtonSegment(value: 'CRITICAL', label: Text('特急')),
-            ],
-            selected: {_urgency},
-            onSelectionChanged: (s) => setState(() => _urgency = s.first),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: PrimaryButton(
+                label: '提交工单', onPressed: _submit, loading: _submitting),
           ),
-          const SizedBox(height: 16),
-          PrimaryButton(label: '提交工单', onPressed: _submit, loading: _submitting),
         ],
       ),
     );

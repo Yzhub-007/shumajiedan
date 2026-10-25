@@ -52,13 +52,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       return loggingIn ? (location == '/splash' ? '/login' : null) : '/login';
     },
     errorBuilder: (context, state) => Scaffold(
+      appBar: AppBar(title: const Text('页面不存在')),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+            Icon(Icons.error_outline,
+                size: 48, color: Theme.of(context).colorScheme.outline),
             const SizedBox(height: 12),
-            Text('页面不存在：${state.uri}', style: const TextStyle(color: Colors.grey)),
+            Text('页面不存在：${state.uri}',
+                style: TextStyle(
+                    fontSize: 13, color: Theme.of(context).colorScheme.outline)),
             const SizedBox(height: 16),
             FilledButton(onPressed: () => context.go('/splash'), child: const Text('返回')),
           ],

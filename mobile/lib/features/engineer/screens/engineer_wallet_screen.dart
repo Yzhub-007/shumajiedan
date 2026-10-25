@@ -89,6 +89,7 @@ class _EngineerWalletScreenState extends ConsumerState<EngineerWalletScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('我的钱包')),
       body: _loading
@@ -96,65 +97,115 @@ class _EngineerWalletScreenState extends ConsumerState<EngineerWalletScreen> {
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
                 children: [
+                  // 余额卡
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(16),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1E5AA8), Color(0xFF3E7BC8)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: scheme.primary.withAlpha(70),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('可用余额（元）',
-                            style: TextStyle(color: Colors.white, fontSize: 13)),
+                        Text('可用余额（元）',
+                            style: TextStyle(
+                                color: Colors.white.withAlpha(210),
+                                fontSize: 13)),
+                        const SizedBox(height: 6),
                         Text('${_wallet?['balance'] ?? 0}',
                             style: const TextStyle(
-                                color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
+                                color: Colors.white,
+                                fontSize: 34,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.5)),
+                        const SizedBox(height: 10),
                         Text(
                             '冻结 ${_wallet?['frozen'] ?? 0} · 累计收入 ${_wallet?['totalIncome'] ?? 0}',
-                            style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 12)),
+                            style: TextStyle(
+                                color: Colors.white.withAlpha(190),
+                                fontSize: 12)),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: _applyWithdrawal,
-                    icon: const Icon(Icons.account_balance_wallet_outlined),
-                    label: const Text('申请提现'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: FilledButton.icon(
+                      onPressed: _applyWithdrawal,
+                      icon: const Icon(Icons.account_balance_wallet_outlined, size: 20),
+                      label: const Text('申请提现'),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  Text('提现记录', style: Theme.of(context).textTheme.titleSmall),
-                  if (_withdrawals.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 32),
-                      child: EmptyView(icon: Icons.receipt_long_outlined, text: '暂无提现记录'),
-                    )
-                  else
-                    ..._withdrawals.map((w) {
-                      final item = w as Map<String, dynamic>;
-                      final status = item['status']?.toString() ?? '';
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('-${item['amount']} 元'),
-                        subtitle: Text(item['createdAt']?.toString() ?? ''),
-                        trailing: Text(
-                          switch (status) {
-                            'APPROVED' => '已通过',
-                            'REJECTED' => '已拒绝',
-                            _ => '审核中',
-                          },
-                          style: TextStyle(
-                              color: status == 'APPROVED'
-                                  ? Colors.green
-                                  : status == 'REJECTED'
-                                      ? Colors.red
-                                      : Colors.orange),
-                        ),
-                      );
-                    }),
+                  SectionCard(
+                    title: '提现记录',
+                    child: _withdrawals.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: EmptyView(
+                                icon: Icons.receipt_long_outlined,
+                                text: '暂无提现记录'),
+                          )
+                        : Column(
+                            children: _withdrawals.map((w) {
+                              final item = w as Map<String, dynamic>;
+                              final status = item['status']?.toString() ?? '';
+                              final statusText = switch (status) {
+                                'APPROVED' => '已通过',
+                                'REJECTED' => '已拒绝',
+                                _ => '审核中',
+                              };
+                              final statusColor = switch (status) {
+                                'APPROVED' => const Color(0xFF34C759),
+                                'REJECTED' => const Color(0xFFFF3B30),
+                                _ => const Color(0xFFFF9500),
+                              };
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 14),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text('-${item['amount']} 元',
+                                              style: const TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w600)),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                              item['createdAt']?.toString() ?? '',
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: scheme
+                                                      .onSurfaceVariant)),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(statusText,
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: statusColor)),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                  ),
                 ],
               ),
             ),
