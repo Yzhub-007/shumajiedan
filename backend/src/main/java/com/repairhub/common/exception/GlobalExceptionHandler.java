@@ -41,6 +41,12 @@ public class GlobalExceptionHandler {
         return ApiResponse.fail(ErrorCode.PARAM_ERROR.getCode(), "请求体格式错误");
     }
 
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ApiResponse<Void> handleTypeMismatch(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException e) {
+        return ApiResponse.fail(ErrorCode.PARAM_ERROR.getCode(), "路径参数格式错误: " + e.getName());
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ApiResponse<Void> handleAccessDenied(AccessDeniedException e) {
         return ApiResponse.fail(ErrorCode.FORBIDDEN);

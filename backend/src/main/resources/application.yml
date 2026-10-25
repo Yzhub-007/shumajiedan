@@ -58,3 +58,8 @@ management:
     web:
       exposure:
         include: health,info
+  health:
+    # 当前代码尚未实际使用 MQ（异步事件为 Spring 进程内事件），RabbitMQ 未启动时
+    # 不让它把整体 health 拉成 DOWN；接入 MQ 消费者后置回 true
+    rabbit:
+      enabled: false

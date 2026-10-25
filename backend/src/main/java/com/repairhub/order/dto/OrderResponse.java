@@ -37,6 +37,7 @@ public class OrderResponse {
     private String statusLabel;
     private BigDecimal quoteAmount;
     private BigDecimal finalAmount;
+    private BigDecimal platformFee;
     private BigDecimal estimatedAmount;
     private LocalDateTime createdAt;
 
@@ -70,6 +71,7 @@ public class OrderResponse {
                 .statusLabel(order.getStatus().getLabel())
                 .quoteAmount(order.getQuoteAmount())
                 .finalAmount(order.getFinalAmount())
+                .platformFee(order.getPlatformFee())
                 .estimatedAmount(estimatedAmount)
                 .createdAt(order.getCreatedAt())
                 .build();
