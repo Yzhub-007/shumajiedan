@@ -34,7 +34,7 @@ public class SmsCodeService {
         }
         String code = String.format("%06d", RANDOM.nextInt(1_000_000));
         redis.opsForValue().set(CODE_KEY + phone, code, CODE_TTL);
-        smsSender.send(phone, "【机器报修】您的验证码是 " + code + "，5 分钟内有效，请勿泄露。");
+        smsSender.sendVerifyCode(phone, code);
         return code;
     }
 

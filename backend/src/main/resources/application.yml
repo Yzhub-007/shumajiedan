@@ -19,7 +19,14 @@ app:
     refresh-token-ttl-days: 30
   sms:
     # true：不发真实短信，验证码打印到日志并在发码响应中返回（仅限开发）
+    # false：走阿里云短信，需先完成签名/模板审核并通过环境变量注入 AK
     mock: true
+    aliyun:
+      # RAM 子用户 AK（敏感信息勿写死提交）；sign-name / template-code 填控制台审核通过的值
+      access-key-id: ${ALIYUN_SMS_ACCESS_KEY_ID:}
+      access-key-secret: ${ALIYUN_SMS_ACCESS_KEY_SECRET:}
+      sign-name: 机器报修
+      template-code: SMS_xxxxxxx
   oss:
     # mock：返回占位 URL；minio：生成 MinIO 预签名直传地址
     provider: mock

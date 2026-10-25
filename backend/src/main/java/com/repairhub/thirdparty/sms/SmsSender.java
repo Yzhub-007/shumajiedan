@@ -1,9 +1,9 @@
 package com.repairhub.thirdparty.sms;
 
 /**
- * 短信发送适配器。生产替换为阿里云/腾讯云短信实现（计划书 1.3.1 需提前申请签名与模板）。
+ * 短信发送适配器（模板模式：内容由厂商侧审核过的签名/模板渲染，后端只传验证码，见 AliyunSmsSender）。
  */
 public interface SmsSender {
 
-    void send(String phone, String content);
+    void sendVerifyCode(String phone, String code);
 }

@@ -61,6 +61,9 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       # 开启支付开关：验收后进入待支付，可在 App 里走完整"去支付"流程
       APP_ORDER_PAYMENT_ENABLED: "true"
+      # 本地联调真实短信时从宿主机环境变量透传（默认 mock=true 用不到）
+      ALIYUN_SMS_ACCESS_KEY_ID: ${ALIYUN_SMS_ACCESS_KEY_ID:-}
+      ALIYUN_SMS_ACCESS_KEY_SECRET: ${ALIYUN_SMS_ACCESS_KEY_SECRET:-}
     ports:
       - "8080:8080"
     volumes:

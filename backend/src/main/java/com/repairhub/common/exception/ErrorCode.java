@@ -21,6 +21,7 @@ public enum ErrorCode {
     USER_NOT_FOUND(20003, "用户不存在"),
     USER_DISABLED(20004, "账号已被禁用"),
     ENGINEER_NOT_APPROVED(20005, "工程师资质未通过审核，无法接单"),
+    SMS_SEND_FAIL(20006, "验证码发送失败，请稍后再试"),
 
     ORDER_NOT_FOUND(30001, "工单不存在"),
     ORDER_STATE_ILLEGAL(30002, "工单当前状态不允许该操作"),

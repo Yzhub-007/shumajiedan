@@ -22,6 +22,7 @@
         <jjwt.version>0.12.6</jjwt.version>
         <springdoc.version>2.6.0</springdoc.version>
         <minio.version>8.5.12</minio.version>
+        <aliyun-dysmsapi.version>4.1.1</aliyun-dysmsapi.version>
     </properties>
 
     <dependencies>
@@ -103,6 +104,13 @@
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
             <version>${minio.version}</version>
+        </dependency>
+
+        <!-- 三方服务：阿里云短信（Dysmsapi OpenAPI） -->
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>dysmsapi20170525</artifactId>
+            <version>${aliyun-dysmsapi.version}</version>
         </dependency>
 
         <!-- 工具 -->
