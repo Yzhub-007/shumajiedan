@@ -1,0 +1,102 @@
+# 本地一键启动（无需本机安装 JDK/Maven/Node，全部使用本地已有镜像）
+#
+#   docker compose -f docker-compose.local.yml up -d
+#
+# 启动后：
+#   后端 API      http://localhost:8080/swagger-ui.html
+#   管理后台      http://localhost:5173  （admin / admin123）
+#
+# 说明：
+# - backend 直接跑源码（maven 镜像 + 源码挂载 + 依赖缓存卷），改动代码后
+#   重启容器即可生效：docker compose -f docker-compose.local.yml restart backend
+# - admin-web 用本地含 Node 的镜像跑 vite dev，代理已指向 backend 容器
+# - MinIO 未包含：OSS 为 mock 模式，上传走后端本地落盘，无需对象存储
+# - 数据存在命名卷中，重置测试数据：docker compose -f docker-compose.local.yml down -v
+name: repairhub-local
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: repairhub
+      POSTGRES_USER: repairhub
+      POSTGRES_PASSWORD: repairhub123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U repairhub"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbit_data:/var/lib/rabbitmq
+
+  backend:
+    image: maven:3.9-eclipse-temurin-17
+    working_dir: /app
+    command: mvn -q spring-boot:run
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/repairhub
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_RABBITMQ_HOST: rabbitmq
+      # 开启支付开关：验收后进入待支付，可在 App 里走完整"去支付"流程
+      APP_ORDER_PAYMENT_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+      - m2_cache:/root/.m2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+
+  admin-web:
+    # 本机已有的含 Node 20 的镜像（无 npm，故挂载宿主机 Node 自带的 npm-cli 运行）
+    image: booster-robotics-registry.cn-beijing.cr.aliyuncs.com/agent-dev/agent-dev:0.6.26-alpha
+    user: root
+    working_dir: /app
+    command: >
+      sh -c "node /opt/hostnpm/bin/npm-cli.js install --no-audit --no-fund &&
+             node /opt/hostnpm/bin/npm-cli.js run dev -- --host 0.0.0.0 --port 5173"
+    environment:
+      VITE_PROXY_TARGET: http://backend:8080
+      VITE_WS_PROXY_TARGET: ws://backend:8080
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./admin-web:/app
+      - adminweb_node_modules:/app/node_modules
+      - "C:/Program Files/nodejs/node_modules/npm:/opt/hostnpm:ro"
+    depends_on:
+      - backend
+
+volumes:
+  pg_data:
+  redis_data:
+  rabbit_data:
+  m2_cache:
+  adminweb_node_modules:

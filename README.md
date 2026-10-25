@@ -31,6 +31,19 @@
 
 ## 快速开始
 
+### 0. 无 JDK/Node 环境一键启动（推荐本机测试用）
+
+只需 Docker，无需安装 JDK/Maven/Node（后端跑在 maven 镜像里、后台跑在本地 Node 镜像里）：
+
+```bash
+docker compose -f docker-compose.local.yml up -d
+# 后端就绪约 2-3 分钟（首次需下载依赖），轮询 http://localhost:8080/actuator/health
+```
+
+启动后即可访问：后端 http://localhost:8080/swagger-ui.html ｜ 管理后台 http://localhost:5173（admin / admin123）
+改代码后让后端生效：`docker compose -f docker-compose.local.yml restart backend`
+重置测试数据：`docker compose -f docker-compose.local.yml down -v`
+
 ### 1. 启动本地中间件（需 Docker）
 
 ```bash
