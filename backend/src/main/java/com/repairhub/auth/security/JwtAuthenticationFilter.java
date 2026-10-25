@@ -33,8 +33,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 JwtTokenProvider.ParsedToken parsed = tokenProvider.parse(header.substring(7));
                 if (JwtTokenProvider.TYPE_ACCESS.equals(parsed.type())) {
                     UserPrincipal principal = new UserPrincipal(parsed.userId(), parsed.phone(), parsed.role());
+                    // ROLE_<角色> + 管理员细分角色（SUPER_ADMIN/OPERATOR，供 @PreAuthorize 使用）
+                    java.util.List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + parsed.role()));
+                    if (parsed.adminRole() != null && !parsed.adminRole().isBlank()) {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_" + parsed.adminRole()));
+                    }
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + parsed.role())));
+                            principal, null, authorities);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (JwtException | IllegalArgumentException e) {

@@ -64,6 +64,11 @@ public class NotificationService {
         }
     }
 
+    @Transactional
+    public int markAllRead(Long userId) {
+        return notificationRepository.markAllRead(userId);
+    }
+
     private String toJson(Map<String, Object> data) {
         try {
             return objectMapper.writeValueAsString(data == null ? Map.of() : data);

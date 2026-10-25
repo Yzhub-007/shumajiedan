@@ -37,4 +37,11 @@ public class NotificationController {
         notificationService.markRead(SecurityUtils.currentUserId(), id);
         return ApiResponse.ok();
     }
+
+    @Operation(summary = "全部标记已读")
+    @PostMapping("/read-all")
+    public ApiResponse<Void> readAll() {
+        notificationService.markAllRead(SecurityUtils.currentUserId());
+        return ApiResponse.ok();
+    }
 }

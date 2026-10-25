@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,7 +40,8 @@ public class AdminDeviceCategoryController {
         return ApiResponse.ok(deviceCategoryService.tree(false));
     }
 
-    @Operation(summary = "新增设备类型")
+    @Operation(summary = "新增设备类型（仅超级管理员）")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @PostMapping
     public ApiResponse<CategoryResponse> create(@Valid @RequestBody DeviceCategoryRequest request) {
         DeviceCategory category = new DeviceCategory();
@@ -47,7 +49,8 @@ public class AdminDeviceCategoryController {
         return ApiResponse.ok(CategoryResponse.from(deviceCategoryRepository.save(category)));
     }
 
-    @Operation(summary = "更新设备类型/价格")
+    @Operation(summary = "更新设备类型/价格（仅超级管理员）")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @PutMapping("/{id}")
     public ApiResponse<CategoryResponse> update(@PathVariable Long id,
                                                 @Valid @RequestBody DeviceCategoryRequest request) {
@@ -56,7 +59,8 @@ public class AdminDeviceCategoryController {
         return ApiResponse.ok(CategoryResponse.from(deviceCategoryRepository.save(category)));
     }
 
-    @Operation(summary = "停用（软删除）")
+    @Operation(summary = "停用（软删除，仅超级管理员）")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> disable(@PathVariable Long id) {
         DeviceCategory category = deviceCategoryRepository.findById(id).orElseThrow();

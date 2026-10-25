@@ -32,8 +32,9 @@ public class AdminAuthService {
         if (!passwordEncoder.matches(request.getPassword(), admin.getPasswordHash())) {
             throw new BizException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
-        String access = tokenProvider.generateAccessToken(admin.getId(), admin.getUsername(), UserRole.ADMIN);
+        String access = tokenProvider.generateAccessToken(admin.getId(), admin.getUsername(), UserRole.ADMIN,
+                java.util.Map.of("adminRole", admin.getRole()));
         String refresh = tokenProvider.generateRefreshToken(admin.getId(), admin.getUsername(), UserRole.ADMIN);
-        return new TokenResponse(access, refresh, admin.getId(), UserRole.ADMIN.name(), false);
+        return new TokenResponse(access, refresh, admin.getId(), UserRole.ADMIN.name(), false, admin.getRole());
     }
 }

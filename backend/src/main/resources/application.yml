@@ -37,6 +37,10 @@ app:
     arrive-check-radius-m: 500
     # 派单半径（计划书 5.1.1）
     dispatch-radius-km: 5
+  payment:
+    # 平台抽佣比例（3.2 结算），支付完成时从工程师收入中扣除
+    platform-fee-rate: 0.10
+    min-withdraw-amount: 10
 
 springdoc:
   api-docs:
