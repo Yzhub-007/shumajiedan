@@ -66,11 +66,13 @@ Flutter App(客户/工程师双身份)      Vue3 管理后台
 
 ## 4. 关键技术点落法
 
-1. **附近工程师**：工程师端 `POST /api/engineer/location` → `GEOADD engineers:online`；发单事件 → `GEOSEARCH` 半径内工程师 → 写 `dispatch_records` + 推送。DB 侧 `engineer_profiles.location` 为 PostGIS 生成列（GIST 索引），用于离线统计。
+1. **附近工程师**：工程师端 `POST /api/engineer/location` → `GEOADD engineers:online`（每次必写）；DB 侧 60 秒节流落库（Redis SETNX 窗口）。发单事件 → `GEOSEARCH` 半径内工程师 → 技能匹配（skill_tags ∩ 设备类型，未填技能默认可派）→ 去重后推送并写 `dispatch_records`。DB 侧 `engineer_profiles.location` 为 PostGIS 生成列（GIST 索引），用于离线统计。
 2. **抢单防并发**：`GrabService` 先 `SET lock:order:{id} NX EX 10`，再执行条件更新 `UPDATE orders SET ... WHERE id=? AND status='PENDING'`（`@Modifying`），更新行数=1 才算抢单成功。
-3. **超时处理（P3 待实现，3.1.12）**：预留 RabbitMQ 延迟队列；过渡方案 Redis ZSet 定时扫描（`dispatch` 包预留 `scheduler`）。
-4. **实时推送**：STOMP `/ws`，状态变更后 `OrderWebSocketPublisher` 广播 `/topic/order/{id}`；App 后台时走系统推送（`PushSender` 接口，Mock 实现打日志，后续换极光/APNs）。
-5. **幂等（P3 待实现，3.1.14）**：写接口预留 `requestId` header，OSS 预签名 Key 使用 UUID。
+3. **超时处理（已实现）**：`OrderTimeoutScheduler` 监听状态变更事件，把（工单,阶段,到期时间）写入 Redis ZSet，`@Scheduled` 每 30s 扫描到期项（先原子 ZREM 再处理，多实例安全）。规则：PENDING 15 分钟无人接单 → 半径翻倍重派；ACCEPTED 30 分钟未出发 → 提醒，60 分钟 → RELEASE 回单池（清空 engineer_id）；PENDING_CONFIRM 48 小时 → SYSTEM 角色自动验收。阈值见 `app.order.*` 配置。
+4. **实时推送**：STOMP `/ws`，状态变更后广播 `/topic/order/{id}`（事务提交后 `@TransactionalEventListener`）；App 端 `RealtimeService`（stomp_dart_client）订阅并自动刷新详情页，后台时走系统推送（`PushSender` 接口，Mock 打日志，后续换极光/APNs）。
+5. **链路追踪**：`RequestIdFilter` 透传/生成 `X-Request-Id`，写入 MDC（日志格式含 requestId）与响应头；写接口幂等（requestId 去重）在 V1.1 支付回调时落地。
+6. **文件上传**：开发环境 `POST /api/upload` multipart 落盘 + `/uploads/**` 静态访问（mock provider）；生产切换 MinIO/云 OSS 预签名直传（`POST /api/upload/presign` 已就绪）。
+7. **统计报表**：`/admin/stats/overview` 输出状态分布、近 14 日趋势、平均接单时长（近 30 天）、完成率、平均评分、工程师 Top10；后台 ECharts 渲染。
 
 ## 5. 数据库
 
@@ -79,5 +81,5 @@ Flutter App(客户/工程师双身份)      Vue3 管理后台
 
 ## 6. 前端/移动端分层
 
-- **mobile**：`core`（配置/主题/路由/网络/存储）→ `features/{auth,customer,engineer,notification}`（screen + riverpod controller）→ `shared`（模型与通用组件）。登录后按 `UserRole` 决定首页（客户端 / 工程师端），对应计划书 2.1 建议"一个 App 两种身份"。
+- **mobile**：`core`（配置/主题/路由/网络/存储）→ `features/{auth,customer,engineer,notification}`（screen + riverpod controller）→ `shared`（模型与通用组件）。登录后按 `UserRole` 决定首页（客户端 / 工程师端），对应计划书 2.1 建议"一个 App 两种身份"。网络层含 401 refreshToken 静默续期；`RealtimeService`（STOMP）驱动详情页实时刷新；上传走 `/api/upload`（mock）或 OSS 预签名。
 - **admin-web**：`api`（axios 封装 + 模块化接口）→ `stores`（Pinia 用户态）→ `router`（登录守卫 + 布局内嵌页面）→ `views`（dashboard / engineer 审核 / order / category 价格 / stats）。
