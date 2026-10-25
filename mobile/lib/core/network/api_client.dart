@@ -1,16 +1,17 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../config/app_config.dart';
+import '../config/server_config.dart';
 import '../storage/token_storage.dart';
 import 'api_exception.dart';
 
 /// 网络层：dio + token 注入 + 统一 ApiResponse 解包 + 401 静默续期（计划书 1.2.2）。
+/// baseUrl 每次请求时从 ServerConfig 动态读取，支持 App 内改地址。
 class ApiClient {
   ApiClient() {
     _dio = Dio(
       BaseOptions(
-        baseUrl: AppConfig.apiBaseUrl,
+        baseUrl: ServerConfig.baseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 60),
       ),
@@ -18,6 +19,8 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
+          // 动态覆盖服务器地址（登录页"服务器设置"修改后立即生效）
+          options.baseUrl = ServerConfig.baseUrl;
           final token = TokenStorage.accessToken;
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
@@ -59,7 +62,7 @@ class ApiClient {
       throw const ApiException(code: -1, message: '上传失败');
     }
     if (relative.startsWith('http')) return relative;
-    return AppConfig.apiBaseUrl + relative;
+    return ServerConfig.baseUrl + relative;
   }
 
   dynamic _runWithRefresh(Future<Response<dynamic>> Function() run) async {
@@ -80,7 +83,7 @@ class ApiClient {
     if (_refreshing) return false;
     _refreshing = true;
     try {
-      final dio = Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl));
+      final dio = Dio(BaseOptions(baseUrl: ServerConfig.baseUrl));
       final resp = await dio.post(
         '/api/auth/refresh',
         data: {'refreshToken': TokenStorage.refreshToken},

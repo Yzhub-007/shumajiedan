@@ -19,10 +19,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   final _descController = TextEditingController();
   final _brandController = TextEditingController();
   final _modelController = TextEditingController();
+  final _typeController = TextEditingController();
 
-  List<Map<String, dynamic>> _categories = [];
+  /// 字典树平铺（含二级分类），用于"常用类型"推荐
+  List<Map<String, dynamic>> _flatCategories = [];
+  /// 历史设备记忆（类型+品牌+型号组合），来自 /api/orders/device-history
+  List<Map<String, dynamic>> _deviceHistory = [];
   List<Map<String, dynamic>> _addresses = [];
-  int? _categoryId;
+  int? _selectedCategoryId;
   int? _addressId;
   String _urgency = 'NORMAL';
   DateTime? _expectTime;
@@ -34,6 +38,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   void initState() {
     super.initState();
     _loadCategories();
+    _loadDeviceHistory();
     _loadAddresses();
   }
 
@@ -42,16 +47,32 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     _descController.dispose();
     _brandController.dispose();
     _modelController.dispose();
+    _typeController.dispose();
     super.dispose();
   }
 
   Future<void> _loadCategories() async {
     try {
       final data = await ref.read(apiClientProvider).get('/api/device-categories') as List<dynamic>;
-      setState(() {
-        _categories = data.cast<Map<String, dynamic>>();
-        if (_categories.isNotEmpty) _categoryId = _categories.first['id'] as int;
-      });
+      final flat = <Map<String, dynamic>>[];
+      for (final item in data.cast<Map<String, dynamic>>()) {
+        flat.add(item);
+        final children = item['children'];
+        if (children is List) {
+          flat.addAll(children.cast<Map<String, dynamic>>());
+        }
+      }
+      if (mounted) setState(() => _flatCategories = flat);
+    } catch (_) {}
+  }
+
+  Future<void> _loadDeviceHistory() async {
+    try {
+      final data =
+          await ref.read(apiClientProvider).get('/api/orders/device-history') as List<dynamic>;
+      if (mounted) {
+        setState(() => _deviceHistory = data.cast<Map<String, dynamic>>());
+      }
     } catch (_) {}
   }
 
@@ -107,8 +128,55 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     setState(() => _expectTime = DateTime(date.year, date.month, date.day, time.hour, time.minute));
   }
 
+  String get _typeQuery => _typeController.text.trim().toLowerCase();
+
+  List<Map<String, dynamic>> get _filteredHistory => _deviceHistory
+      .where((h) => _typeQuery.isEmpty
+          ? true
+          : (h['deviceType']?.toString() ?? '').toLowerCase().contains(_typeQuery))
+      .toList();
+
+  List<Map<String, dynamic>> get _filteredCategories => _flatCategories
+      .where((c) => _typeQuery.isEmpty
+          ? true
+          : (c['name']?.toString() ?? '').toLowerCase().contains(_typeQuery))
+      .toList();
+
+  /// 文本与字典名一致时带上 id，保留计价与技能匹配
+  int? _categoryIdByName(String name) {
+    final hit = _flatCategories
+        .where((c) => (c['name']?.toString() ?? '').trim() == name.trim())
+        .toList();
+    return hit.isEmpty ? null : hit.first['id'] as int?;
+  }
+
+  String _historyLabel(Map<String, dynamic> h) {
+    final parts = [h['deviceType'], h['deviceBrand'], h['deviceModel']]
+        .map((e) => (e ?? '').toString().trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    return parts.isEmpty ? '历史设备' : parts.join(' · ');
+  }
+
+  void _applyHistory(Map<String, dynamic> h) {
+    setState(() {
+      _typeController.text = (h['deviceType'] ?? '').toString();
+      _brandController.text = (h['deviceBrand'] ?? '').toString();
+      _modelController.text = (h['deviceModel'] ?? '').toString();
+      _selectedCategoryId = _categoryIdByName(_typeController.text);
+    });
+  }
+
+  void _applyCategory(Map<String, dynamic> c) {
+    setState(() {
+      _typeController.text = c['name']?.toString() ?? '';
+      _selectedCategoryId = c['id'] as int?;
+    });
+  }
+
   Future<void> _submit() async {
-    if (_categoryId == null || _addressId == null || _descController.text.trim().isEmpty) {
+    final typeText = _typeController.text.trim();
+    if (typeText.isEmpty || _addressId == null || _descController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('请完善设备类型、服务地址与故障描述')));
       return;
@@ -116,7 +184,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     setState(() => _submitting = true);
     try {
       await ref.read(apiClientProvider).post('/api/orders', data: {
-        'deviceCategoryId': _categoryId,
+        'deviceCategoryId': _selectedCategoryId,
+        'deviceCategoryInput': typeText,
         'deviceBrand': _brandController.text.trim(),
         'deviceModel': _modelController.text.trim(),
         'faultDesc': _descController.text.trim(),
@@ -150,17 +219,70 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                DropdownButtonFormField<int>(
-                  value: _categoryId,
-                  decoration: const InputDecoration(labelText: '设备类型'),
-                  items: _categories
-                      .map((c) => DropdownMenuItem<int>(
-                            value: c['id'] as int,
-                            child: Text(c['name']?.toString() ?? ''),
-                          ))
-                      .toList(),
-                  onChanged: (value) => setState(() => _categoryId = value),
+                TextField(
+                  controller: _typeController,
+                  maxLength: 50,
+                  buildCounter: (context,
+                          {required currentLength,
+                          required isFocused,
+                          required maxLength}) =>
+                      null,
+                  onChanged: (value) => setState(() {
+                        // 手动改动文本后仅当仍与所选字典名一致时保留关联
+                        if (_selectedCategoryId != null &&
+                            _categoryIdByName(value) != _selectedCategoryId) {
+                          _selectedCategoryId = null;
+                        }
+                      }),
+                  decoration: const InputDecoration(
+                    labelText: '设备类型',
+                    hintText: '输入或从下方推荐中选择',
+                  ),
                 ),
+                if (_filteredHistory.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text('最近使用',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurfaceVariant)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final h in _filteredHistory)
+                        ActionChip(
+                          avatar: Icon(Icons.history,
+                              size: 16, color: scheme.primary),
+                          label: Text(_historyLabel(h),
+                              overflow: TextOverflow.ellipsis),
+                          onPressed: () => _applyHistory(h),
+                        ),
+                    ],
+                  ),
+                ],
+                if (_filteredCategories.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text('常用类型',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurfaceVariant)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final c in _filteredCategories)
+                        ActionChip(
+                          label: Text(c['name']?.toString() ?? '',
+                              overflow: TextOverflow.ellipsis),
+                          onPressed: () => _applyCategory(c),
+                        ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Row(children: [
                   Expanded(child: TextField(

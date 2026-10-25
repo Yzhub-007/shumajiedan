@@ -114,7 +114,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                   height: 8,
                                   decoration: BoxDecoration(
                                       color: scheme.primary,
-                                      shape: BoxShape.circle)),
+                                      shape: BoxShape.circle))
                               : null,
                           onTap: () async {
                             // 计划书 3.2.7：标记已读并按身份跳转对应工单

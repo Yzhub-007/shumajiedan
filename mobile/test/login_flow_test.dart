@@ -26,6 +26,11 @@ void main() {
   });
 
   testWidgets('验证码登录成功后进入客户首页', (tester) async {
+    // 用手机级大视口，整页（含协议勾选框）全部可见，避免懒加载/滚动抖动
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(ProviderScope(
       overrides: [apiClientProvider.overrideWithValue(FakeApiClient())],
       child: const RepairHubApp(),
@@ -45,7 +50,13 @@ void main() {
     await tester.tap(find.text('自动填入'));
     await tester.pump();
 
-    // 勾选用户协议（未勾选时点击登录只弹提示）
+    // 勾选用户协议（小屏视口下需先滚动到可见，ListView 懒加载）
+    await tester.scrollUntilVisible(
+      find.byType(Checkbox),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.byType(Checkbox));
     await tester.pump();
 
@@ -60,6 +71,10 @@ void main() {
   });
 
   testWidgets('登出后重新登录（切换账号场景）', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(ProviderScope(
       overrides: [apiClientProvider.overrideWithValue(FakeApiClient())],
       child: const RepairHubApp(),
@@ -112,6 +127,10 @@ void main() {
   });
 
   testWidgets('工程师身份登录后进入接单大厅（切换身份场景）', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(ProviderScope(
       overrides: [apiClientProvider.overrideWithValue(FakeApiClient())],
       child: const RepairHubApp(),
@@ -129,6 +148,12 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('自动填入'));
     await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byType(Checkbox),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.byType(Checkbox));
     await tester.pump();
     await tester.tap(find.text('登录 / 注册'));

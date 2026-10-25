@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 
-import '../../core/config/app_config.dart';
+import '../../core/config/server_config.dart';
 import '../../core/storage/token_storage.dart';
 
 /// 工单实时事件（STOMP over WebSocket，计划书 3.2.8 / 5.1.5）。
@@ -29,7 +29,7 @@ class RealtimeService {
     final token = TokenStorage.accessToken;
     _client = StompClient(
       config: StompConfig(
-        url: AppConfig.wsUrl,
+        url: ServerConfig.wsUrl,
         stompConnectHeaders:
             token == null ? null : {'Authorization': 'Bearer $token'},
         reconnectDelay: const Duration(seconds: 5),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/config/server_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/user_role.dart';
 import '../../../shared/widgets/common_widgets.dart';
@@ -21,6 +22,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _phoneController = TextEditingController();
   final _codeController = TextEditingController();
+  final _serverCtrl = TextEditingController(text: ServerConfig.baseUrl);
   UserRole _role = UserRole.customer;
   int _countdown = 0;
   Timer? _timer;
@@ -30,6 +32,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void dispose() {
     _phoneController.dispose();
     _codeController.dispose();
+    _serverCtrl.dispose();
     _timer?.cancel();
     super.dispose();
   }
@@ -296,7 +299,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             const SizedBox(height: 28),
             PrimaryButton(label: '登录 / 注册', onPressed: _login, loading: auth.loading),
-            const SizedBox(height: 14),
+            const SizedBox(height: 4),
+            // 电脑 IP 被校园网 DHCP 轮换时，在这里改成新地址即可，无需重新打包
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(bottom: 8),
+                title: Text('服务器设置（当前：${ServerConfig.baseUrl}）',
+                    style: TextStyle(
+                        fontSize: 12, color: scheme.onSurfaceVariant)),
+                children: [
+                  Row(children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _serverCtrl,
+                        decoration: const InputDecoration(
+                            labelText: 'API 地址',
+                            hintText: 'http://<电脑IP>:8080'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    OutlinedButton(
+                      onPressed: () async {
+                        final url = _serverCtrl.text.trim();
+                        if (!url.startsWith('http')) {
+                          _toast('地址需以 http:// 开头');
+                          return;
+                        }
+                        await ServerConfig.setBaseUrl(url);
+                        if (!mounted) return;
+                        setState(() {});
+                        _toast('已保存：${ServerConfig.baseUrl}');
+                      },
+                      child: const Text('保存'),
+                    ),
+                  ]),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
