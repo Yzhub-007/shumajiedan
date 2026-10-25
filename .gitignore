@@ -33,3 +33,8 @@ admin-web/dist/
 
 # ---- Docker ----
 docker/volumes/
+
+# ---- 运行时数据 ----
+# Mock OSS 本地落盘的上传文件与 ZCode 会话数据，不进仓库
+backend/data/uploads/
+.zcode/
