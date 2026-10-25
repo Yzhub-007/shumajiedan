@@ -50,8 +50,13 @@ class AuthController extends StateNotifier<AuthState> {
     state = state.copyWith(initialized: true, role: hasToken ? role : null);
   }
 
-  Future<void> sendSmsCode(String phone) async {
-    await _api.post('/api/auth/sms-code', data: {'phone': phone});
+  /// 发送验证码；开发模式返回后端下发的 devCode（生产为 null，走真实短信）
+  Future<String?> sendSmsCode(String phone) async {
+    final data = await _api.post('/api/auth/sms-code', data: {'phone': phone});
+    if (data is Map && data['devCode'] != null) {
+      return data['devCode'].toString();
+    }
+    return null;
   }
 
   Future<void> login(String phone, String code, UserRole role) async {

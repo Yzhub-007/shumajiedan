@@ -41,11 +41,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
     try {
-      await ref
+      final devCode = await ref
           .read(authControllerProvider.notifier)
           .sendSmsCode(_phoneController.text.trim());
       if (!mounted) return;
-      _toast('验证码已发送（开发模式验证码见后端日志）');
+      if (devCode != null && devCode.isNotEmpty) {
+        // 开发模式：验证码直接展示，免去翻后端日志（生产环境此弹窗不会出现）
+        _showDevCodeDialog(devCode);
+      } else {
+        _toast('验证码已发送，请查收短信');
+      }
       setState(() => _countdown = 60);
       _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (_countdown <= 1) {
@@ -56,6 +61,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } on ApiException catch (e) {
       _toast(e.message);
     }
+  }
+
+  void _showDevCodeDialog(String code) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('验证码（开发模式）'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(code,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 8,
+                      color: Theme.of(context).colorScheme.primary,
+                    )),
+            const SizedBox(height: 8),
+            const Text('正式版将通过短信下发，此弹窗仅开发环境出现',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('手动输入')),
+          FilledButton(
+            onPressed: () {
+              _codeController.text = code;
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('自动填入'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _login() async {
