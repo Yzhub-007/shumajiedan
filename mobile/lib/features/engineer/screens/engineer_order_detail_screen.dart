@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/network/api_client.dart';
@@ -57,10 +58,22 @@ class _EngineerOrderDetailScreenState extends ConsumerState<EngineerOrderDetailS
     }
   }
 
+  /// 到达签到：取真实 GPS，后端校验与服务地址距离 ≤ 500m（计划书 3.1.5）
   Future<void> _arrive() async {
-    // TODO(3.2.3) geolocator 取真实 GPS；后端会校验与服务地址距离 ≤ 500m
-    await _post('/arrive', body: {'lng': 121.4737, 'lat': 31.2304},
-        successMsg: '签到成功');
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 8),
+      );
+      await _post('/arrive',
+          body: {'lng': position.longitude, 'lat': position.latitude},
+          successMsg: '签到成功');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('定位失败，请开启定位权限后在服务地址附近签到')));
+      }
+    }
   }
 
   Future<void> _showQuoteDialog() async {
