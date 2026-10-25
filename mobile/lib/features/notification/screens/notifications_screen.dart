@@ -39,7 +39,22 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('消息中心')),
+      appBar: AppBar(
+        title: const Text('消息中心'),
+        actions: [
+          TextButton(
+            onPressed: _items.isEmpty
+                ? null
+                : () async {
+                    try {
+                      await ref.read(apiClientProvider).post('/api/notifications/read-all');
+                      _load();
+                    } catch (_) {}
+                  },
+            child: const Text('全部已读'),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading

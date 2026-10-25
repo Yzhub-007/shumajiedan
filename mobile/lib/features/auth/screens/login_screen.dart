@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../shared/models/user_role.dart';
@@ -22,6 +23,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   UserRole _role = UserRole.customer;
   int _countdown = 0;
   Timer? _timer;
+  bool _agreed = false;
 
   @override
   void dispose() {
@@ -57,6 +59,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login() async {
+    if (!_agreed) {
+      _toast('请先阅读并同意《用户服务协议》与《隐私政策》');
+      return;
+    }
     if (!_phoneValid) {
       _toast('请输入正确的手机号');
       return;
@@ -76,6 +82,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Widget _agreementLink(BuildContext context, String label, bool privacy) {
+    return GestureDetector(
+      onTap: () => context.push(privacy ? '/agreement/privacy' : '/agreement/terms'),
+      child: Text(label,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: Theme.of(context).colorScheme.primary)),
+    );
   }
 
   @override
@@ -145,10 +162,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             const SizedBox(height: 32),
             PrimaryButton(label: '登录 / 注册', onPressed: _login, loading: auth.loading),
             const SizedBox(height: 12),
-            Text('登录即代表同意《用户协议》与《隐私政策》',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall),
-            // TODO(5.2.1) 协议页与勾选框（上架合规必须）
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: Checkbox(
+                    value: _agreed,
+                    onChanged: (v) => setState(() => _agreed = v ?? false),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text('已阅读并同意', style: Theme.of(context).textTheme.bodySmall),
+                _agreementLink(context, '《用户服务协议》', false),
+                _agreementLink(context, '《隐私政策》', true),
+              ],
+            ),
           ],
         ),
       ),

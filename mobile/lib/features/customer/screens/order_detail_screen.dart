@@ -178,7 +178,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                _buildActions(status),
+                _buildActions(status, order),
               ],
             ),
     );
@@ -208,7 +208,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     );
   }
 
-  Widget _buildActions(String status) {
+  Widget _buildActions(String status, Map<String, dynamic>? order) {
     switch (status) {
       case 'PENDING':
       case 'ACCEPTED':
@@ -260,6 +260,19 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     successMsg: '验收通过'),
                 child: const Text('验收通过'))),
           ]),
+        );
+      case 'PENDING_PAYMENT':
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: FilledButton.icon(
+            onPressed: _acting
+                ? null
+                : () => _action('/pay',
+                    body: {'channel': 'MOCK'},
+                    successMsg: '支付成功'),
+            icon: const Icon(Icons.payment_outlined),
+            label: Text('去支付 ¥${order?['finalAmount'] ?? order?['quoteAmount'] ?? ""}'),
+          ),
         );
       case 'COMPLETED':
         return Padding(

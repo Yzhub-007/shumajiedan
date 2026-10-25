@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/controllers/auth_controller.dart';
+import '../../features/auth/screens/agreement_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/customer/screens/address_manage_screen.dart';
@@ -14,6 +15,7 @@ import '../../features/engineer/screens/engineer_home_screen.dart';
 import '../../features/engineer/screens/engineer_order_detail_screen.dart';
 import '../../features/engineer/screens/engineer_profile_screen.dart';
 import '../../features/engineer/screens/engineer_verify_screen.dart';
+import '../../features/engineer/screens/engineer_wallet_screen.dart';
 import '../../features/notification/screens/notifications_screen.dart';
 import '../../shared/models/user_role.dart';
 import '../storage/token_storage.dart';
@@ -26,8 +28,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final location = state.matchedLocation;
       final loggingIn = location == '/splash' || location == '/login';
+      // 协议页公开可见（登录前需阅读，计划书 5.2.1）
+      final publicPage = location.startsWith('/agreement');
       final loggedIn = auth.loggedIn && TokenStorage.accessToken != null;
 
+      if (publicPage) return null;
       if (!auth.initialized) {
         return loggingIn ? null : '/splash';
       }
@@ -62,9 +67,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             EngineerOrderDetailScreen(orderId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
       ),
       GoRoute(path: '/engineer/profile', builder: (_, __) => const EngineerProfileScreen()),
+      GoRoute(path: '/engineer/wallet', builder: (_, __) => const EngineerWalletScreen()),
 
       // ---- 公共 ----
       GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
+      GoRoute(
+          path: '/agreement/terms',
+          builder: (_, __) => const AgreementScreen(isPrivacy: false)),
+      GoRoute(
+          path: '/agreement/privacy',
+          builder: (_, __) => const AgreementScreen(isPrivacy: true)),
     ],
   );
 });

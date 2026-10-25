@@ -78,7 +78,7 @@ class _EngineerProfileScreenState extends ConsumerState<EngineerProfileScreen> {
             leading: const Icon(Icons.account_balance_wallet_outlined),
             title: const Text('我的钱包 / 提现'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {/* TODO(V1.1) 钱包与提现（依赖在线支付） */},
+            onTap: () => context.push('/engineer/wallet'),
           ),
           ListTile(
             leading: const Icon(Icons.notifications_outlined),

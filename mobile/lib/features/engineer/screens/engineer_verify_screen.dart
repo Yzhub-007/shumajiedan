@@ -22,6 +22,7 @@ class _EngineerVerifyScreenState extends ConsumerState<EngineerVerifyScreen> {
   String? _currentStatus;
   String? _frontUrl;
   String? _backUrl;
+  final List<String> _certUrls = [];
 
   @override
   void initState() {
@@ -72,6 +73,22 @@ class _EngineerVerifyScreenState extends ConsumerState<EngineerVerifyScreen> {
     }
   }
 
+  /// 技能证书多图上传（计划书 2.2.6）
+  Future<void> _pickCerts() async {
+    final files = await ImagePicker().pickMultiImage(imageQuality: 85, maxWidth: 1920);
+    for (final f in files) {
+      try {
+        final url = await ref.read(apiClientProvider).upload(f.path);
+        setState(() => _certUrls.add(url));
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('证书上传失败：$e')));
+        }
+      }
+    }
+  }
+
   Future<void> _submit() async {
     if (_nameController.text.trim().isEmpty ||
         _idCardController.text.trim().isEmpty) {
@@ -91,7 +108,7 @@ class _EngineerVerifyScreenState extends ConsumerState<EngineerVerifyScreen> {
         'idCardNo': _idCardController.text.trim(),
         'idCardFrontUrl': _frontUrl,
         'idCardBackUrl': _backUrl,
-        'certUrls': <String>[],
+        'certUrls': _certUrls,
         'skillTags': _skillsController.text
             .split(',')
             .map((s) => s.trim())
@@ -191,6 +208,25 @@ class _EngineerVerifyScreenState extends ConsumerState<EngineerVerifyScreen> {
               controller: _skillsController,
               decoration: const InputDecoration(
                   labelText: '擅长设备类型（逗号分隔，如：注塑机,制冷设备）')),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _pickCerts,
+            icon: const Icon(Icons.workspace_premium_outlined),
+            label: Text('技能证书上传（${_certUrls.length}）'),
+          ),
+          if (_certUrls.isNotEmpty)
+            SizedBox(
+              height: 72,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _certUrls.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 6),
+                itemBuilder: (context, index) => ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.network(_certUrls[index], width: 72, height: 72, fit: BoxFit.cover),
+                ),
+              ),
+            ),
           const SizedBox(height: 16),
           Text('服务半径：${_radiusKm.round()} 公里'),
           Slider(
