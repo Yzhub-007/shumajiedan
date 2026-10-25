@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,11 +22,19 @@ import '../../shared/models/user_role.dart';
 import '../storage/token_storage.dart';
 
 /// 全局路由：登录守卫 + 按身份分流（客户端 / 工程师端）。
+/// 注意：GoRouter 只创建一次；登录态变化通过 refreshListenable 触发 redirect
+/// 重算。若直接 watch 登录态来重建路由器，会在导航过程中替换整个路由栈，
+/// 导致切换账号时白屏。
 final routerProvider = Provider<GoRouter>((ref) {
-  final auth = ref.watch(authControllerProvider);
+  final refresh = ValueNotifier<int>(0);
+  ref.listen<AuthState>(authControllerProvider, (_, __) => refresh.value++);
+  ref.onDispose(refresh.dispose);
+
   return GoRouter(
     initialLocation: '/splash',
+    refreshListenable: refresh,
     redirect: (context, state) {
+      final auth = ref.read(authControllerProvider);
       final location = state.matchedLocation;
       final loggingIn = location == '/splash' || location == '/login';
       // 协议页公开可见（登录前需阅读，计划书 5.2.1）
@@ -42,6 +51,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       return loggingIn ? (location == '/splash' ? '/login' : null) : '/login';
     },
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+            const SizedBox(height: 12),
+            Text('页面不存在：${state.uri}', style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: () => context.go('/splash'), child: const Text('返回')),
+          ],
+        ),
+      ),
+    ),
     routes: [
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),

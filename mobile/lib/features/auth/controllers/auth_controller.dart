@@ -4,6 +4,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../shared/models/user_role.dart';
+import '../../notification/realtime_service.dart';
 
 class AuthState {
   const AuthState({
@@ -43,6 +44,7 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   final ApiClient _api;
+  final _realtime = RealtimeService.instance;
 
   void _restore() {
     final role = UserRole.tryParse(TokenStorage.role);
@@ -85,6 +87,8 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    // 断开实时通道（内含旧账号的 WebSocket 连接与订阅）
+    _realtime.dispose();
     await TokenStorage.clear();
     state = state.copyWith(role: null, initialized: true);
   }
