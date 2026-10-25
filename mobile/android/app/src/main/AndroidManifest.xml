@@ -1,8 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="repairhub_app"
+        android:label="机器报修"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
+        <!-- usesCleartextTraffic：开发阶段后端为 http 明文（Android 9+ 默认拦截），上线前切换 HTTPS 后移除 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
