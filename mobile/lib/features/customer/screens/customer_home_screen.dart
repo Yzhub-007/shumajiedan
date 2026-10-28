@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/common_widgets.dart';
 
 /// 客户端首页：快捷发单入口 + 进行中工单卡片（计划书 2.2.2）。
+/// 常用功能已下沉到底部 Tab 栏（首页 / 工单 / 消息 / 我的）。
 class CustomerHomeScreen extends ConsumerWidget {
   const CustomerHomeScreen({super.key});
 
@@ -16,14 +17,14 @@ class CustomerHomeScreen extends ConsumerWidget {
       body: SafeArea(
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
+          padding: const EdgeInsets.fromLTRB(0, 8, 0, 116),
           children: [
             LargeTitleHeader(
               title: '机器报修',
               subtitle: '设备故障，一键找工程师',
               actions: IconButton(
                 icon: const Icon(Icons.notifications_outlined, size: 26),
-                onPressed: () => context.push('/notifications'),
+                onPressed: () => context.go('/customer/notifications'),
               ),
             ),
             // 快捷发单入口
@@ -95,91 +96,39 @@ class CustomerHomeScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
+            // 进行中工单（预留展示区，TODO(2.2.2) 接入 GET /api/orders）
             SectionCard(
               title: '进行中工单',
               trailing: TextButton(
-                onPressed: () => context.push('/customer/orders'),
+                onPressed: () => context.go('/customer/orders'),
                 child: const Text('全部'),
               ),
-              child: Column(
-                children: [
-                  Icon(Icons.schedule,
-                      size: 30, color: scheme.onSurfaceVariant.withAlpha(120)),
-                  const SizedBox(height: 8),
-                  Text('暂无进行中工单',
-                      style: TextStyle(
-                          fontSize: 13, color: scheme.onSurfaceVariant)),
-                  const SizedBox(height: 2),
-                  Text('发布工单后可在这里实时查看维修进度',
-                      style: TextStyle(
-                          fontSize: 11, color: scheme.outline)),
-                ],
-              ),
-              // TODO(2.2.2) GET /api/orders 拉取进行中工单，展示状态与工程师进度
-            ),
-            SectionCard(
-              title: '常用功能',
-              child: Row(
-                children: [
-                  _QuickAction(
-                      icon: Icons.receipt_long,
-                      label: '我的工单',
-                      onTap: () => context.push('/customer/orders')),
-                  _QuickAction(
-                      icon: Icons.location_on_outlined,
-                      label: '地址管理',
-                      onTap: () => context.push('/customer/addresses')),
-                  _QuickAction(
-                      icon: Icons.notifications_none,
-                      label: '消息中心',
-                      onTap: () => context.push('/notifications')),
-                  _QuickAction(
-                      icon: Icons.person_outline,
-                      label: '个人中心',
-                      onTap: () => context.push('/customer/profile')),
-                ],
+              child: Container(
+                height: 170,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: scheme.onSurfaceVariant.withAlpha(10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.schedule,
+                        size: 36, color: scheme.onSurfaceVariant.withAlpha(120)),
+                    const SizedBox(height: 10),
+                    Text('暂无进行中工单',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurfaceVariant)),
+                    const SizedBox(height: 4),
+                    Text('发布工单后可在这里实时查看维修进度',
+                        style: TextStyle(fontSize: 11, color: scheme.outline)),
+                  ],
+                ),
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({required this.icon, required this.label, this.onTap});
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: scheme.primary.withAlpha(20),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, size: 22, color: scheme.primary),
-              ),
-              const SizedBox(height: 8),
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 12, color: scheme.onSurfaceVariant)),
-            ],
-          ),
         ),
       ),
     );

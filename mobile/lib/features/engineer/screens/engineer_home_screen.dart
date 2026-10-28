@@ -142,7 +142,7 @@ class _EngineerHomeScreenState extends ConsumerState<EngineerHomeScreen> {
               subtitle: '附近工单实时推送',
               actions: IconButton(
                 icon: const Icon(Icons.notifications_outlined, size: 26),
-                onPressed: () => context.push('/notifications'),
+                onPressed: () => context.go('/engineer/notifications'),
               ),
             ),
             // 接单状态卡：iOS 开关 + 状态点
@@ -226,7 +226,7 @@ class _EngineerHomeScreenState extends ConsumerState<EngineerHomeScreen> {
                                 text: '附近暂无可抢工单'),
                           ])
                         : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 116),
                             itemCount: _pool.length,
                             itemBuilder: (context, index) {
                               final order = _pool[index] as Map<String, dynamic>;

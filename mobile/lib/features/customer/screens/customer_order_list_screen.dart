@@ -102,7 +102,7 @@ class _CustomerOrderListScreenState extends ConsumerState<CustomerOrderListScree
                           EmptyView(text: '暂无工单'),
                         ])
                       : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 116),
                           itemCount: _orders.length,
                           itemBuilder: (context, index) {
                             final order = _orders[index];

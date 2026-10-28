@@ -57,7 +57,7 @@ class _EngineerProfileScreenState extends ConsumerState<EngineerProfileScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('我的')),
       body: ListView(
-        padding: const EdgeInsets.only(top: 4, bottom: 32),
+        padding: const EdgeInsets.only(top: 4, bottom: 124),
         children: [
           // 资料卡
           Container(
@@ -163,7 +163,7 @@ class _EngineerProfileScreenState extends ConsumerState<EngineerProfileScreen> {
                 title: const Text('消息中心'),
                 trailing:
                     Icon(Icons.chevron_right, size: 18, color: scheme.outline),
-                onTap: () => context.push('/notifications'),
+                onTap: () => context.go('/engineer/notifications'),
               ),
             ],
           ),

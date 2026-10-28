@@ -66,7 +66,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     EmptyView(text: '暂无消息'),
                   ])
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 116),
                     itemCount: _items.length,
                     itemBuilder: (context, index) {
                       final item = _items[index] as Map<String, dynamic>;

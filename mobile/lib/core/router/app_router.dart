@@ -19,9 +19,12 @@ import '../../features/engineer/screens/engineer_verify_screen.dart';
 import '../../features/engineer/screens/engineer_wallet_screen.dart';
 import '../../features/notification/screens/notifications_screen.dart';
 import '../../shared/models/user_role.dart';
+import '../../shared/widgets/glass_shell.dart';
 import '../storage/token_storage.dart';
 
 /// 全局路由：登录守卫 + 按身份分流（客户端 / 工程师端）。
+/// 客户端 / 工程师端各自使用 StatefulShellRoute 挂微信式底部 Tab 栏
+/// （液态玻璃材质，见 GlassShellScreen）；详情等二级页放在壳外全屏推入。
 /// 注意：GoRouter 只创建一次；登录态变化通过 refreshListenable 触发 redirect
 /// 重算。若直接 watch 登录态来重建路由器，会在导航过程中替换整个路由栈，
 /// 导致切换账号时白屏。
@@ -73,31 +76,95 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
 
-      // ---- 客户端 ----
-      GoRoute(path: '/customer/home', builder: (_, __) => const CustomerHomeScreen()),
-      GoRoute(path: '/customer/create-order', builder: (_, __) => const CreateOrderScreen()),
-      GoRoute(path: '/customer/orders', builder: (_, __) => const CustomerOrderListScreen()),
+      // ---- 客户端 Tab 壳（微信式底部导航）----
+      StatefulShellRoute.indexedStack(
+        builder: (_, __, shell) => GlassShellScreen(
+          shell: shell,
+          tabs: const [
+            GlassTab(icon: Icons.home_outlined, activeIcon: Icons.home_filled, label: '首页'),
+            GlassTab(
+                icon: Icons.receipt_long_outlined,
+                activeIcon: Icons.receipt_long,
+                label: '工单'),
+            GlassTab(
+                icon: Icons.notifications_none,
+                activeIcon: Icons.notifications,
+                label: '消息'),
+            GlassTab(icon: Icons.person_outline, activeIcon: Icons.person, label: '我的'),
+          ],
+        ),
+        branches: [
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/customer/home', builder: (_, __) => const CustomerHomeScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/customer/orders',
+                builder: (_, __) => const CustomerOrderListScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/customer/notifications',
+                builder: (_, __) => const NotificationsScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/customer/profile',
+                builder: (_, __) => const CustomerProfileScreen()),
+          ]),
+        ],
+      ),
+      // 客户端全屏页（隐藏 Tab 栏）
       GoRoute(
         path: '/customer/orders/:id',
         builder: (_, state) =>
             OrderDetailScreen(orderId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
       ),
-      GoRoute(path: '/customer/profile', builder: (_, __) => const CustomerProfileScreen()),
       GoRoute(path: '/customer/addresses', builder: (_, __) => const AddressManageScreen()),
+      GoRoute(path: '/customer/create-order', builder: (_, __) => const CreateOrderScreen()),
 
-      // ---- 工程师端 ----
-      GoRoute(path: '/engineer/home', builder: (_, __) => const EngineerHomeScreen()),
-      GoRoute(path: '/engineer/verify', builder: (_, __) => const EngineerVerifyScreen()),
+      // ---- 工程师端 Tab 壳 ----
+      StatefulShellRoute.indexedStack(
+        builder: (_, __, shell) => GlassShellScreen(
+          shell: shell,
+          tabs: const [
+            GlassTab(
+                icon: Icons.handyman_outlined,
+                activeIcon: Icons.handyman,
+                label: '大厅'),
+            GlassTab(
+                icon: Icons.notifications_none,
+                activeIcon: Icons.notifications,
+                label: '消息'),
+            GlassTab(icon: Icons.person_outline, activeIcon: Icons.person, label: '我的'),
+          ],
+        ),
+        branches: [
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/engineer/home', builder: (_, __) => const EngineerHomeScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/engineer/notifications',
+                builder: (_, __) => const NotificationsScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/engineer/profile',
+                builder: (_, __) => const EngineerProfileScreen()),
+          ]),
+        ],
+      ),
+      // 工程师端全屏页（隐藏 Tab 栏）
       GoRoute(
         path: '/engineer/orders/:id',
         builder: (_, state) =>
             EngineerOrderDetailScreen(orderId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
       ),
-      GoRoute(path: '/engineer/profile', builder: (_, __) => const EngineerProfileScreen()),
+      GoRoute(path: '/engineer/verify', builder: (_, __) => const EngineerVerifyScreen()),
       GoRoute(path: '/engineer/wallet', builder: (_, __) => const EngineerWalletScreen()),
 
       // ---- 公共 ----
-      GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
       GoRoute(
           path: '/agreement/terms',
           builder: (_, __) => const AgreementScreen(isPrivacy: false)),
